@@ -30,13 +30,14 @@ logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
 cluster_resolver, strategy = connect_to_tpu()
 
 train_cfg = get_train_config(
-    optimizer="adamw",
-    base_lr=0.001 * strategy.num_replicas_in_sync,
+    optimizer="sgd",
+    base_lr=0.1 * strategy.num_replicas_in_sync,
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
     weight_decay=5e-5,
     momentum=0.9,
+    label_smoothing=0.0,
     lr_schedule="half_cos",
     log_dir=log_location + "/logs",
     model_dir=log_location + "/models",
@@ -51,7 +52,7 @@ train_prep_cfg = get_preprocessing_config(
     resize_pre_crop=320,
     augment_fn="default",
     num_classes=1000,
-    color_jitter=False,
+    color_jitter=True,
     mixup=False,
 )
 
@@ -91,9 +92,17 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 now = datetime.now()
 date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
 
-config_dict = get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg)
+misc_dict = {
+    "Rescaling": "1/255",
+    "Normalization": "None"
+}
+config_dict = get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg, misc_dict=misc_dict)
+
+logging.info(config_dict)
+
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name=model.name + "_" + date_time, config=config_dict )
+           job_type="train",  name=model.name + "_" + date_time,
+           config=config_dict)
 
 
 callbacks = get_callbacks(train_cfg, date_time)

@@ -245,7 +245,7 @@ def get_callbacks(cfg, timestr):
     ]
 
 
-def get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg):
+def get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg, misc=None):
     config_dict = dict()
     train_prep_dict = asdict(train_prep_cfg)
     val_prep_dict = asdict(val_prep_cfg)
@@ -254,6 +254,8 @@ def get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg):
     config_dict["train_prep"] = train_prep_dict
     config_dict["val_prep"] = val_prep_dict
     config_dict["train_cfg"] = asdict(train_cfg)
+    config_dict["misc"] = misc
+    return config_dict
 
 # def make_model(flops, train_cfg):
 #     optim = get_optimizer(train_cfg)
