@@ -1,7 +1,7 @@
 """Contains utility functions for training."""
 
 from typing import List, Type, Union, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import yaml
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -90,6 +90,7 @@ class TrainConfig:
     total_epochs: int
     weight_decay: float
     momentum: float
+    label_smoothing: float
     lr_schedule: str
     log_dir: str
     model_dir: str
@@ -128,6 +129,7 @@ def get_train_config(
     total_epochs: int = 100,
     weight_decay: float = 5e-5,
     momentum: float = 0.9,
+    label_smoothing: float = 0.0,
     lr_schedule: str = "half_cos",
     log_dir: str = "",
     model_dir: str = "",
@@ -139,6 +141,7 @@ def get_train_config(
         warmup_factor=warmup_factor,
         total_epochs=total_epochs,
         weight_decay=weight_decay,
+        label_smoothing=label_smoothing,
         momentum=momentum,
         lr_schedule=lr_schedule,
         log_dir=log_dir,
@@ -242,10 +245,15 @@ def get_callbacks(cfg, timestr):
     ]
 
 
-def top1error(y_true, y_pred):
-    acc = tf.keras.metrics.categorical_accuracy(y_true, y_pred)
-    return 1.0 - acc
-
+def get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg):
+    config_dict = dict()
+    train_prep_dict = asdict(train_prep_cfg)
+    val_prep_dict = asdict(val_prep_cfg)
+    del train_prep_dict["tfrecs_filepath"]
+    del val_prep_dict["tfrecs_filepath"]
+    config_dict["train_prep"] = train_prep_dict
+    config_dict["val_prep"] = val_prep_dict
+    config_dict["train_cfg"] = asdict(train_cfg)
 
 # def make_model(flops, train_cfg):
 #     optim = get_optimizer(train_cfg)

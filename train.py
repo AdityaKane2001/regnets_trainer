@@ -15,6 +15,9 @@ from utils import *
 
 
 
+NORMALIZED = False
+
+
 log_location = "gs://ak-us-train"
 train_tfrecs_filepath = tf.io.gfile.glob(
     "gs://adityakane-imagenet-tfrecs/train_*.tfrecord")
@@ -71,7 +74,7 @@ with strategy.scope():
     model = tf.keras.applications.RegNetX002()
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
-            from_logits=True, label_smoothing=0.2),
+            from_logits=True, label_smoothing=train_cfg.label_smoothing),
         optimizer=optim,
         metrics=[
             tf.keras.metrics.CategoricalAccuracy(name="accuracy"),
@@ -88,8 +91,9 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 now = datetime.now()
 date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
 
+config_dict = get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg)
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train", name=model.name + "_" + date_time)
+           job_type="train",  name=model.name + "_" + date_time, config=config_dict )
 
 
 callbacks = get_callbacks(train_cfg, date_time)
