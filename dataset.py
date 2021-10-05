@@ -54,7 +54,7 @@ class ImageNet:
         self.resize_pre_crop = cfg.resize_pre_crop
         self.augment_fn = cfg.augment_fn
         self.num_classes = cfg.num_classes
-        self.color_jitter = cfg.color_jitter
+        self.apply_color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
         self.area_factor = 0.08
         self.no_aug = no_aug
@@ -370,7 +370,7 @@ class ImageNet:
             return ds
 
         if self.default_augment:
-            if self.color_jitter:
+            if self.apply_color_jitter:
                 ds = ds.map(self.color_jitter, num_parallel_calls=AUTO)
 
             ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
