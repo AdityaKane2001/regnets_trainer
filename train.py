@@ -16,9 +16,9 @@ from utils import *
 
 
 log_location = "gs://ak-us-train"
-train_tfrecs_filepath = train_tfrecs_filepath = tf.io.gfile.glob(
+train_tfrecs_filepath = tf.io.gfile.glob(
     "gs://adityakane-imagenet-tfrecs/train_*.tfrecord")
-val_tfrecs_filepath = train_tfrecs_filepath = tf.io.gfile.glob(
+val_tfrecs_filepath = tf.io.gfile.glob(
     "gs://adityakane-imagenet-tfrecs/valid_*.tfrecord")
 
 logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
@@ -89,7 +89,7 @@ now = datetime.now()
 date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
 
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train", name="regnet")
+           job_type="train", name=model.name + "_" + date_time)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
