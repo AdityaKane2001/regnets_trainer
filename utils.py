@@ -158,12 +158,7 @@ def get_optimizer(cfg):
             nesterov=True,
         )
 
-        return tfa.optimizers.MovingAverage(
-            opt,
-            average_decay=0.0001024,
-            start_step=6250,
-        )
-
+        return opt
     elif cfg.optimizer == "adam":
         return tf.keras.optimizers.Adam(
             learning_rate=cfg.base_lr,
