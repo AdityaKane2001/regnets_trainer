@@ -49,17 +49,23 @@ train_prep_cfg = get_preprocessing_config(
     batch_size=1024,
     image_size=512,
     crop_size=224,
-    resize_pre_crop=320,
+    resize_pre_crop=256,
     augment_fn="default",
     num_classes=1000,
-    color_jitter=True,
+    color_jitter=False,
     mixup=False,
 )
 
 val_prep_cfg = get_preprocessing_config(
     tfrecs_filepath=val_tfrecs_filepath,
+    batch_size=1024,
+    image_size=512,
+    crop_size=224,
+    resize_pre_crop=256,
     augment_fn="val",
-    mixup=False
+    num_classes=1000,
+    color_jitter=False,
+    mixup=False,
 )
 
 logging.info(f"Training options detected: {train_cfg}")

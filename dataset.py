@@ -204,7 +204,8 @@ class ImageNet:
         sizes = [self.batch_size, h, w, 3]
 
         aug_images = tf.slice(images, begins, sizes)
-        aug_images = tf.image.resize(aug_images, (224, 224))
+        aug_images = tf.image.resize(
+            aug_images, (self.crop_size, self.crop_size))
 
         return aug_images, labels
 
