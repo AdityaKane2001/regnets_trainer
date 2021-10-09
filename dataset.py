@@ -1,10 +1,11 @@
-"""Contains preprocessing functions for RegNets"""
+"""Contains preprocessing functions for RegNetY"""
 
 from typing import Union, Callable, Tuple, List, Type
 from datetime import datetime
 import math
 import tensorflow as tf
 import tensorflow_addons as tfa
+import os
 import tensorflow_probability as tfp
 
 tfd = tfp.distributions
@@ -54,7 +55,7 @@ class ImageNet:
         self.resize_pre_crop = cfg.resize_pre_crop
         self.augment_fn = cfg.augment_fn
         self.num_classes = cfg.num_classes
-        self.apply_color_jitter = cfg.color_jitter
+        self.color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
         self.area_factor = 0.08
         self.no_aug = no_aug
@@ -104,7 +105,7 @@ class ImageNet:
         example = tf.io.parse_example(example_, _TFRECS_FORMAT)
         image = tf.reshape(
             tf.io.decode_jpeg(
-                example["image"]), (self.image_size, self.image_size, 3)
+                example["image"]), (example["height"], example["width"], 3)
         )
         height = example["height"]
         width = example["width"]
@@ -136,7 +137,8 @@ class ImageNet:
 
         ds = ds.map(self.decode_example, num_parallel_calls=AUTO)
 
-        ds = ds.batch(self.batch_size, drop_remainder=True)
+        # ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
+        # ds = ds.batch(self.batch_size, drop_remainder=True)
         ds = ds.prefetch(AUTO)
         return ds
 
@@ -171,7 +173,7 @@ class ImageNet:
 
         return aug_images, target
 
-    def _inception_style_crop(self, images, labels):
+    def _inception_style_crop_batched(self, images, labels):
         """
         Applies inception style cropping
 
@@ -204,8 +206,7 @@ class ImageNet:
         sizes = [self.batch_size, h, w, 3]
 
         aug_images = tf.slice(images, begins, sizes)
-        aug_images = tf.image.resize(
-            aug_images, (self.crop_size, self.crop_size))
+        aug_images = tf.image.resize(aug_images, (224, 224))
 
         return aug_images, labels
 
@@ -316,7 +317,7 @@ class ImageNet:
         """
         return (example["image"], tf.one_hot(example["label"], self.num_classes))
 
-    def _mixup(self, image, label) -> Tuple:
+    def _mixup(self, image, label,alpha=0.2) -> Tuple:
         """
         Function to apply mixup augmentation. To be applied after
         one hot encoding and before batching.
@@ -335,7 +336,7 @@ class ImageNet:
         image1 = tf.cast(image1, tf.float32)
         image2 = tf.cast(image2, tf.float32)
 
-        alpha = [0.2]
+        alpha = [alpha]
         dist = tfd.Beta(alpha, alpha)
         l = dist.sample(1)[0][0]
 
@@ -346,22 +347,60 @@ class ImageNet:
 
         return img, lab
 
-    def make_dataset(self) -> Type[tf.data.Dataset]:
-        """
-        Function to apply all preprocessing and augmentations on dataset using
-        tf.data.dataset.map().
+    def _inception_style_crop_single(self, example):
+        height = tf.cast(example["height"], tf.int32)
+        width = tf.cast(example["width"], tf.int32)
+        area = tf.cast(height * width, tf.float32)
 
-        If `augment_fn` argument is not set to the string "default", it should be set to
-        a callable object. That callable must take exactly two arguments: `image` and `target`
-        and must return two values corresponding to the same.
+        target_area = tf.random.uniform((), minval=0.08, maxval=1) * area
+        aspect_ratio = tf.random.uniform((), minval=3./4., maxval=4./3.)
 
-        Args: None.
+        w_crop = tf.cast(
+            tf.math.round(
+                tf.math.sqrt(
+                    target_area * aspect_ratio
+                )), tf.int32)
+        h_crop = tf.cast(
+            tf.math.round(
+                tf.math.sqrt(
+                    target_area / aspect_ratio
+                )), tf.int32)
+        if w_crop >= width:
+            w_crop = width
+            x = 0
+            y = tf.random.uniform(
+                (), minval=0, maxval=height - h_crop, dtype=tf.int32)
 
-        Returns:
-            tf.data.Dataset instance having the final format as follows:
-            (image, target)
-        """
+        elif h_crop >= height:
+            h_crop = height
+            x = tf.random.uniform(
+                (), minval=0, maxval=width - w_crop, dtype=tf.int32)
+            y = 0
+
+        else:
+            x = tf.random.uniform(
+                (), minval=0, maxval=width - w_crop, dtype=tf.int32)
+            y = tf.random.uniform(
+                (), minval=0, maxval=height - h_crop, dtype=tf.int32)
+
+        img = example["image"][y: y + h_crop, x: x + w_crop, :]
+        img = tf.cast(tf.math.round(tf.image.resize(
+            img, (self.crop_size, self.crop_size))), tf.uint8)
+
+        return {
+            "image": img,
+            "height": self.crop_size,
+            "width": self.crop_size,
+            "filename": example["filename"],
+            "label": example["label"],
+            "synset": example["synset"],
+        }
+
+    def make_dataset(self):
+
         ds = self._read_tfrecs()
+
+        ds = ds.map(self._inception_style_crop_single, num_parallel_calls=AUTO)
 
         ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
 
@@ -371,10 +410,8 @@ class ImageNet:
             return ds
 
         if self.default_augment:
-            if self.apply_color_jitter:
+            if self.color_jitter:
                 ds = ds.map(self.color_jitter, num_parallel_calls=AUTO)
-
-            ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
             ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
             ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
 
