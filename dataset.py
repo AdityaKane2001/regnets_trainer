@@ -400,6 +400,8 @@ class ImageNet:
 
         ds = ds.map(self._inception_style_crop_single, num_parallel_calls=AUTO)
 
+        ds = ds.batch(self.batch_size, drop_remainder=True)
+
         ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
 
         if self.no_aug:
@@ -424,47 +426,4 @@ class ImageNet:
             ds = ds.map(self.augment_fn, num_parallel_calls=AUTO)
 
         return ds
-
-    def make_dataset_old(self) -> Type[tf.data.Dataset]:
-        """
-        Function to apply all preprocessing and augmentations on dataset using
-        tf.data.dataset.map().
-
-        If `augment_fn` argument is not set to the string "default", it should be set to
-        a callable object. That callable must take exactly two arguments: `image` and `target`
-        and must return two values corresponding to the same.
-
-        Args: None.
-
-        Returns:
-            tf.data.Dataset instance having the final format as follows:
-            (image, target)
-        """
-        ds = self._read_tfrecs()
-
-        ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
-
-        if self.no_aug:
-            ds = ds.map(lambda image,label: (tf.cast(image, tf.uint8), label), num_parallel_calls=AUTO)
-            return ds
-
-        if self.default_augment:
-            if self.color_jitter:
-                ds = ds.map(self.color_jitter, num_parallel_calls=AUTO)
-
-            ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
-            ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
-            ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
-            
-            if self.mixup:
-                ds = ds.map(self._mixup, num_parallel_calls=AUTO)
-
-        elif self.val_augment:
-            ds = ds.map(self.center_crop, num_parallel_calls=AUTO)
-
-        else:
-            ds = ds.map(self.augment_fn, num_parallel_calls=AUTO)
-
-        return ds
-
 
