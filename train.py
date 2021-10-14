@@ -20,9 +20,9 @@ NORMALIZED = False
 
 log_location = "gs://ak-us-train"
 train_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://adityakane-imagenet-tfrecs/train_*.tfrecord")
+    "gs://ak-imagenet-new/train/train_*.tfrecord")
 val_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://adityakane-imagenet-tfrecs/valid_*.tfrecord")
+    "gs://ak-imagenet-new/valid/valid_*.tfrecord")
 
 logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
                     datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO)
@@ -77,7 +77,6 @@ logging.info(
 
 with strategy.scope():
     optim = get_optimizer(train_cfg)
-    ## Enter model here
     model = tf.keras.applications.RegNetX002()
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
@@ -88,12 +87,14 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
+    
 
-    # model.load_weights(log_location + "/init_weights/" + flops.upper())
+    # model.load_weights("gs://ak-us-train/models/10_13_2021_07h50m/all_model_epoch_60")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
 val_ds = ImageNet(val_prep_cfg).make_dataset()
+val_ds = val_ds.shuffle(48)
 
 now = datetime.now()
 date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
@@ -102,7 +103,7 @@ misc_dict = {
     "Rescaling": "1/255",
     "Normalization": "None"
 }
-config_dict = get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg, misc_dict=misc_dict)
+config_dict = get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
 
 logging.info(config_dict)
 
@@ -112,12 +113,20 @@ wandb.init(entity="compyle", project="keras-regnet-training",
 
 
 callbacks = get_callbacks(train_cfg, date_time)
+count=1251*60
 
+# for i in range(len(callbacks)):
+#     try:
+#         callbacks[i].count = count
+#     except:
+#         pass
+    
 history = model.fit(
     train_ds,
    	epochs=train_cfg.total_epochs,
    	validation_data=val_ds,
    	callbacks=callbacks,
+    # initial_epoch=60
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:

@@ -20,6 +20,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
+
 @dataclass
 class PreprocessingConfig:
     tfrecs_filepath: List[str]
@@ -158,11 +159,11 @@ def get_optimizer(cfg):
             nesterov=True,
         )
 
-        opt = tfa.optimizers.MovingAverage(
-            opt,
-            average_decay=0.99999,
-            start_step=6250,
-        )
+#         opt = tfa.optimizers.MovingAverage(
+#             opt,
+#             average_decay=0.99999,
+#             start_step=6250,
+#         )
         return opt
     elif cfg.optimizer == "adam":
         return tf.keras.optimizers.Adam(
@@ -214,17 +215,17 @@ def get_callbacks(cfg, timestr):
         log_dir=os.path.join(cfg.log_dir, timestr), histogram_freq=1
     )  # profile_batch="0,1023"
 
-    # best_model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-    #     filepath=os.path.join(
-    #         cfg.model_dir,
-    #         timestr,
-    #         "best_model_epoch_{epoch:02d}_val_loss_{val_loss:.2f}",
-    #     ),
-    #     save_weights_only=True,
-    #     monitor="val_accuracy",
-    #     mode="max",
-    #     save_best_only=True,
-    # )
+    best_model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=os.path.join(
+            cfg.model_dir,
+            timestr,
+            "best_model_epoch_{epoch:02d}_val_loss_{val_loss:.2f}",
+        ),
+        save_weights_only=True,
+        monitor="val_accuracy",
+        mode="max",
+        save_best_only=True,
+    )
     all_models_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(
             cfg.model_dir,
@@ -254,7 +255,7 @@ def get_callbacks(cfg, timestr):
         lr_callback,
         tboard_callback,
         # best_model_checkpoint_callback,
-        average_saving_callback,
+        #         average_saving_callback,
         all_models_checkpoint_callback,
         WandbCallback(),
     ]
