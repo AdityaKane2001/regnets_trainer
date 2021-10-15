@@ -14,7 +14,6 @@ from dataset import ImageNet
 from utils import *
 
 
-
 NORMALIZED = False
 
 
@@ -87,7 +86,6 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    
 
     # model.load_weights("gs://ak-us-train/models/10_13_2021_07h50m/all_model_epoch_60")
     logging.info("Model loaded")
@@ -103,7 +101,8 @@ misc_dict = {
     "Rescaling": "1/255",
     "Normalization": "None"
 }
-config_dict = get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
+config_dict = get_config_dict(
+    train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
 
 logging.info(config_dict)
 
@@ -113,14 +112,14 @@ wandb.init(entity="compyle", project="keras-regnet-training",
 
 
 callbacks = get_callbacks(train_cfg, date_time)
-count=1251*60
+count = 1251*60
 
 # for i in range(len(callbacks)):
 #     try:
 #         callbacks[i].count = count
 #     except:
 #         pass
-    
+
 history = model.fit(
     train_ds,
    	epochs=train_cfg.total_epochs,

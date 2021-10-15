@@ -56,7 +56,7 @@ class ImageNet:
         self.num_classes = cfg.num_classes
         self.color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
-        self.area_factor = 0.08
+        self.area_factor = 0.25
         self.no_aug = no_aug
         eigen_vals = tf.constant(
             [[0.2175, 0.0188, 0.0045],
@@ -183,7 +183,7 @@ class ImageNet:
             Augmented example with batch of images and targets with same dimensions.
         """
         # # Get target metrics
-        area_ratio = tf.random.uniform((), minval=0.08, maxval=1.0)
+        area_ratio = tf.random.uniform((), minval=self.area_factor, maxval=1.0)
 
         aspect_ratio = tf.random.uniform((), minval=3./4., maxval=4./3.)
 
@@ -384,7 +384,7 @@ class ImageNet:
         width = tf.cast(example["width"], tf.int32)
         area = tf.cast(height * width, tf.float32)
 
-        target_area = tf.random.uniform((), minval=0.08, maxval=1) * area
+        target_area = tf.random.uniform((), minval=self.area_factor, maxval=1) * area
         aspect_ratio = tf.random.uniform((), minval=3./4., maxval=4./3.)
 
         w_crop = tf.cast(
@@ -399,30 +399,31 @@ class ImageNet:
                 )), tf.int32)
 
         if w_crop >= width:
-            try:
+            if height - h_crop <= 0:
+                x = 0
+                y = 0
+            else:
                 w_crop = width
                 x = 0
                 y = tf.random.uniform(
                     (), minval=0, maxval=height - h_crop + 5, dtype=tf.int32)
-            except:
+
+        elif h_crop >= height:
+            if width - w_crop <= 0:
                 x = 0
                 y = 0
-        elif h_crop >= height:
-            try:
+            else:
                 h_crop = height
                 x = tf.random.uniform(
                     (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
                 y = 0
-            except:
-                x = 0
-                y = 0
         else:
-            try:
+            if width - w_crop > 0 or height - h_crop > 0:
                 x = tf.random.uniform(
-                    (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
+                    (), minval=0, maxval=width - w_crop, dtype=tf.int32)
                 y = tf.random.uniform(
-                    (), minval=0, maxval=height - h_crop + 5, dtype=tf.int32)
-            except:
+                    (), minval=0, maxval=height - h_crop, dtype=tf.int32)
+            else:
                 x = 0
                 y = 0
         img = tf.cast(example["image"], tf.uint8)
@@ -452,13 +453,16 @@ class ImageNet:
             ds = ds.map(self._inception_style_crop_single,
                         num_parallel_calls=AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
+            ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
+            
             if self.color_jitter:
                 ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
             ds = ds.batch(self.batch_size, drop_remainder=True)
+            ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
 
             # ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
-            ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
-            ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
+            
+            
 
             if self.mixup:
                 ds = ds.map(self._mixup, num_parallel_calls=AUTO)
