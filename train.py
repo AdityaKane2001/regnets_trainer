@@ -67,6 +67,16 @@ val_prep_cfg = get_preprocessing_config(
     mixup=False,
 )
 
+config_dict = get_config_dict(
+    train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
+
+logging.info(config_dict)
+
+wandb.init(entity="compyle", project="keras-regnet-training",
+           job_type="train",  name=model.name + "_" + date_time,
+           config=config_dict)
+train_cfg = wandb.config.train_cfg
+
 logging.info(f"Training options detected: {train_cfg}")
 logging.info("Preprocessing options detected.")
 logging.info(
@@ -101,14 +111,6 @@ misc_dict = {
     "Rescaling": "1/255",
     "Normalization": "None"
 }
-config_dict = get_config_dict(
-    train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
-
-logging.info(config_dict)
-
-wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name=model.name + "_" + date_time,
-           config=config_dict)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
