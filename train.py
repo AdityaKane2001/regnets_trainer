@@ -12,7 +12,7 @@ from datetime import datetime
 from wandb.keras import WandbCallback
 from dataset import ImageNet
 from utils import *
-
+from dacite import from_dict
 
 NORMALIZED = False
 
@@ -52,7 +52,7 @@ train_prep_cfg = get_preprocessing_config(
     augment_fn="default",
     num_classes=1000,
     color_jitter=False,
-    mixup=False,
+    mixup=True,
 )
 
 val_prep_cfg = get_preprocessing_config(
@@ -67,16 +67,24 @@ val_prep_cfg = get_preprocessing_config(
     mixup=False,
 )
 
+misc_dict = {
+    "Rescaling": "1/255",
+    "Normalization": "None"
+}
+
+now = datetime.now()
+date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
+
 config_dict = get_config_dict(
     train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
 
 logging.info(config_dict)
 
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name=model.name + "_" + date_time,
+           job_type="train",  name="regnetx002" + "_" + date_time,
            config=config_dict)
 train_cfg = wandb.config.train_cfg
-
+train_cfg = from_dict(data_class=TrainConfig, data=train_cfg)
 logging.info(f"Training options detected: {train_cfg}")
 logging.info("Preprocessing options detected.")
 logging.info(
@@ -97,37 +105,28 @@ with strategy.scope():
         ],
     )
 
-    # model.load_weights("gs://ak-us-train/models/10_13_2021_07h50m/all_model_epoch_60")
+    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_01")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
 val_ds = ImageNet(val_prep_cfg).make_dataset()
 val_ds = val_ds.shuffle(48)
 
-now = datetime.now()
-date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
-
-misc_dict = {
-    "Rescaling": "1/255",
-    "Normalization": "None"
-}
-
-
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1251*60
+count = 1251*1
 
-# for i in range(len(callbacks)):
-#     try:
-#         callbacks[i].count = count
-#     except:
-#         pass
+for i in range(len(callbacks)):
+    try:
+        callbacks[i].count = count
+    except:
+        pass
 
 history = model.fit(
     train_ds,
    	epochs=train_cfg.total_epochs,
    	validation_data=val_ds,
    	callbacks=callbacks,
-    # initial_epoch=60
+    initial_epoch=1
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:

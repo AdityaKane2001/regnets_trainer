@@ -1,0 +1,6 @@
+wandb_version: 1
+
+train_cfg.base_lr:
+  value: 0.4
+train_cfg.weight_decay:
+  value: 5.0e-05
