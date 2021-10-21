@@ -457,20 +457,20 @@ class ImageNet:
             
             if self.color_jitter:
                 ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
-            ds = ds.batch(self.batch_size, drop_remainder=True)
+            ds = ds.repeat()
+            ds = ds.batch(self.batch_size, drop_remainder=False)
             ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
-
+            
             # ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
-            
-            
-
             if self.mixup:
                 ds = ds.map(self._mixup, num_parallel_calls=AUTO)
 
         elif self.val_augment:
             ds = ds.map(self.validation_crop, num_parallel_calls=AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
-            ds = ds.batch(self.batch_size, drop_remainder=True)
+            ds = ds.repeat()
+            ds = ds.batch(self.batch_size, drop_remainder=False)
+            
 
         else:
             ds = ds.map(self.augment_fn, num_parallel_calls=AUTO)
