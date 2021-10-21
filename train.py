@@ -69,7 +69,8 @@ val_prep_cfg = get_preprocessing_config(
 
 misc_dict = {
     "Rescaling": "1/255",
-    "Normalization": "None"
+    "Normalization": "None",
+    "EMA_optimizer": True
 }
 
 now = datetime.now()
