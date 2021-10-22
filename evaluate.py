@@ -80,9 +80,9 @@ config_dict = get_config_dict(
 
 logging.info(config_dict)
 
-wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name="regnetx002" + "_" + date_time,
-           config=config_dict)
+# wandb.init(entity="compyle", project="keras-regnet-training",
+#            job_type="train",  name="regnetx002" + "_" + date_time,
+#            config=config_dict)
 # train_cfg = wandb.config.train_cfg
 # train_cfg = from_dict(data_class=TrainConfig, data=train_cfg)
 logging.info(f"Training options detected: {train_cfg}")
@@ -104,32 +104,34 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_20_2021_17h07m02s/all_model_epoch_91")
+    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_97")
     logging.info("Model loaded")
 
-train_ds = ImageNet(train_prep_cfg).make_dataset()
+# train_ds = ImageNet(train_prep_cfg).make_dataset()
 val_ds = ImageNet(val_prep_cfg).make_dataset()
-val_ds = val_ds.shuffle(48)
+# val_ds = val_ds.shuffle(48)
 
 
-callbacks = get_callbacks(train_cfg, date_time)
-count = 1252*91
+# callbacks = get_callbacks(train_cfg, date_time)
+# count = 1252*91
 
-for i in range(len(callbacks)):
-    try:
-        callbacks[i].count = count
-    except:
-        pass
+# for i in range(len(callbacks)):
+#     try:
+#         callbacks[i].count = count
+#     except:
+#         pass
 
-history = model.fit(
-    train_ds,
-   	epochs=train_cfg.total_epochs,
-   	validation_data=val_ds,
-   	callbacks=callbacks,
-    steps_per_epoch = 1252,
-    validation_steps = 50,
-    initial_epoch=91
-)
+# history = model.fit(
+#     train_ds,
+#    	epochs=train_cfg.total_epochs,
+#    	validation_data=val_ds,
+#    	callbacks=callbacks,
+#     steps_per_epoch = 1252,
+#     validation_steps = 50,
+#     initial_epoch=91
+# )
 
-with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
-   json.dump(str(history.history), f)
+metrics = model.evaluate(val_ds, steps=55, verbose=1)
+print(metrics)
+# with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
+#    json.dump(str(history.history), f)
