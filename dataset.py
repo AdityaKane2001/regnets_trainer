@@ -329,7 +329,7 @@ class ImageNet:
         img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
 
         return {
-            "image": img,
+            "image": tf.cast(img, tf.uint8),
             "height": self.crop_size,
             "width": self.crop_size,
             "filename": example["filename"],
@@ -405,7 +405,7 @@ class ImageNet:
 
 
         
-        for _ in range(max_iter):
+        for _ in tf.range(max_iter):
             w_crop, h_crop = self._get_random_dims(area)
             
             prob = tf.random.uniform((), minval=0.0, maxval=1.0)
@@ -424,22 +424,40 @@ class ImageNet:
                             x = 0
                         else:
                             x = tf.random.uniform(
-                                (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
+                                (), minval=0, maxval=width - w_crop + 1, dtype=tf.int32)
                     else:
                         y = tf.random.uniform(
-                            (), minval=0, maxval=height - h_crop + 5, dtype=tf.int32)
+                            (), minval=0, maxval=height - h_crop + 1, dtype=tf.int32)
                         if w_crop == width:
                             x = 0
                         else:
                             x = tf.random.uniform(
-                                (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
+                                (), minval=0, maxval=width - w_crop + 1, dtype=tf.int32)
                     
-                    img = tf.cast(example["image"], tf.uint8)
-                    img = img[y: y + h_crop, x: x + w_crop, :]
-                    img = tf.cast(tf.math.round(tf.image.resize(
+                    
+                    got_img = True
+                    break
+                else:
+                    x = 0
+                    y = 0
+                    got_img = False
+#                     img = tf.zeros((self.crop_size, self.crop_size, 3), dtype=tf.uint8)
+                    continue
+#                     return 0
+            else:
+                x = 0
+                y = 0
+                got_img = False
+#                 img = tf.zeros((self.crop_size, self.crop_size, 3), dtype=tf.uint8)
+                continue
+#                 return 0
+        
+        if got_img:
+            img = tf.cast(example["image"], tf.uint8)
+            img = img[y: y + h_crop, x: x + w_crop, :]
+            img = tf.cast(tf.math.round(tf.image.resize(
                         img, (self.crop_size, self.crop_size))), tf.uint8)
-
-                    return {
+            return {
                         "image": img,
                         "height": self.crop_size,
                         "width": self.crop_size,
@@ -447,18 +465,8 @@ class ImageNet:
                         "label": example["label"],
                         "synset": example["synset"],
                     }
-                else:
-                    x = 0
-                    y = 0
-                    img = tf.constant(0, dtype=tf.uint8)
-                    continue
-            else:
-                x = 0
-                y = 0
-                img = tf.constant(0, dtype=tf.uint8)
-                continue
-        
-        return self._validation_crop(example)
+        else:
+            return self.validation_crop(example)
 
     def make_dataset(self):
 

@@ -104,16 +104,16 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_20_2021_17h07m02s/all_model_epoch_91")
+    model.load_weights("gs://ak-us-train/models/10_21_2021_12h51m24s/all_model_epoch_12")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
 val_ds = ImageNet(val_prep_cfg).make_dataset()
-val_ds = val_ds.shuffle(48)
+# val_ds = val_ds.shuffle(48)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1252*91
+count = 1252*12
 
 for i in range(len(callbacks)):
     try:
@@ -128,7 +128,7 @@ history = model.fit(
    	callbacks=callbacks,
     steps_per_epoch = 1252,
     validation_steps = 50,
-    initial_epoch=91
+    initial_epoch=12
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
