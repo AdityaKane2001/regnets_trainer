@@ -1,4 +1,3 @@
-"""Script for training RegNetY. Supports TPU training."""
 
 import tensorflow as tf
 import argparse
@@ -15,7 +14,7 @@ from utils import *
 from dacite import from_dict
 
 NORMALIZED = False
-
+tf.keras.backend.clear_session()
 
 log_location = "gs://ak-us-train"
 train_tfrecs_filepath = tf.io.gfile.glob(
@@ -30,7 +29,7 @@ cluster_resolver, strategy = connect_to_tpu()
 
 train_cfg = get_train_config(
     optimizer="sgd",
-    base_lr=0.1 * strategy.num_replicas_in_sync,
+    base_lr=0,
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
@@ -95,6 +94,7 @@ logging.info(
 with strategy.scope():
     optim = get_optimizer(train_cfg)
     model = tf.keras.applications.RegNetX002()
+    
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
             from_logits=True, label_smoothing=train_cfg.label_smoothing),
@@ -104,12 +104,12 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_97")
+    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_96")
     logging.info("Model loaded")
 
 # train_ds = ImageNet(train_prep_cfg).make_dataset()
 val_ds = ImageNet(val_prep_cfg).make_dataset()
-# val_ds = val_ds.shuffle(48)
+# val_ds = val_ds.shuffle(49)
 
 
 # callbacks = get_callbacks(train_cfg, date_time)
@@ -121,17 +121,21 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 #     except:
 #         pass
 
-# history = model.fit(
-#     train_ds,
-#    	epochs=train_cfg.total_epochs,
+history = model.fit(
+    val_ds,
+   	epochs=1,
 #    	validation_data=val_ds,
 #    	callbacks=callbacks,
-#     steps_per_epoch = 1252,
-#     validation_steps = 50,
+    steps_per_epoch = 50,
+#     validation_steps = 49,
 #     initial_epoch=91
-# )
+)
 
-metrics = model.evaluate(val_ds, steps=55, verbose=1)
-print(metrics)
+metrics1 = model.evaluate(val_ds, steps=50, verbose=1)
+# metrics2 = model.evaluate(val_ds, verbose=1)
+# metrics3 = model.evaluate(val_ds, verbose=1)
+
+# print(metrics1[1], metrics2[1], metrics3[1])
+# print(metrics)
 # with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
 #    json.dump(str(history.history), f)
