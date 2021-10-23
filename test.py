@@ -34,7 +34,7 @@ train_cfg = get_train_config(
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
-    weight_decay=1e-5,
+    weight_decay=5e-5,
     momentum=0.9,
     label_smoothing=0.0,
     lr_schedule="half_cos",
@@ -78,61 +78,15 @@ date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
 config_dict = get_config_dict(
     train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
 
-logging.info(config_dict)
+# logging.info(config_dict)
 
 wandb.init(entity="compyle", project="keras-regnet-training",
            job_type="train",  name="regnetx002" + "_" + date_time,
            config=config_dict)
 train_cfg = wandb.config.train_cfg
+
+
+
 train_cfg = from_dict(data_class=TrainConfig, data=train_cfg)
 
-
-logging.info(f"Training options detected: {train_cfg}")
-logging.info("Preprocessing options detected.")
-logging.info(
-    f"Training on TFRecords: {train_prep_cfg.tfrecs_filepath[0]} to {train_prep_cfg.tfrecs_filepath[-1]}")
-logging.info(
-    f"Validating on TFRecords: {val_prep_cfg.tfrecs_filepath[0]} to {val_prep_cfg.tfrecs_filepath[-1]}")
-
-with strategy.scope():
-    optim = get_optimizer(train_cfg)
-    model = tf.keras.applications.RegNetX002()
-    model.compile(
-        loss=tf.keras.losses.CategoricalCrossentropy(
-            from_logits=True, label_smoothing=train_cfg.label_smoothing),
-        optimizer=optim,
-        metrics=[
-            tf.keras.metrics.CategoricalAccuracy(name="accuracy"),
-            tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
-        ],
-    )
-
-    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_01")
-    logging.info("Model loaded")
-
-train_ds = ImageNet(train_prep_cfg).make_dataset()
-# train_ds = train_ds.shuffle(300)
-val_ds = ImageNet(val_prep_cfg).make_dataset()
-val_ds = val_ds.shuffle(49)
-
-callbacks = get_callbacks(train_cfg, date_time)
-count = 1251*1
-
-for i in range(len(callbacks)):
-    try:
-        callbacks[i].count = count
-    except:
-        pass
-
-history = model.fit(
-    train_ds,
-   	epochs=train_cfg.total_epochs,
-    steps_per_epoch=1251,
-   	validation_data=val_ds,
-    validation_steps=50,
-   	callbacks=callbacks,
-    initial_epoch=1
-)
-
-with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
-   json.dump(str(history.history), f)
+print(train_cfg)
