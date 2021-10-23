@@ -1,5 +1,6 @@
 """Script for training RegNetY. Supports TPU training."""
-
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 import argparse
 import os
@@ -104,7 +105,7 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_21_2021_12h51m24s/all_model_epoch_12")
+#     model.load_weights("gs://ak-us-train/models/10_21_2021_12h51m24s/all_model_epoch_12")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -113,13 +114,13 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1252*12
+# count = 1252*12
 
-for i in range(len(callbacks)):
-    try:
-        callbacks[i].count = count
-    except:
-        pass
+# for i in range(len(callbacks)):
+#     try:
+#         callbacks[i].count = count
+#     except:
+#         pass
 
 history = model.fit(
     train_ds,
@@ -128,7 +129,7 @@ history = model.fit(
    	callbacks=callbacks,
     steps_per_epoch = 1252,
     validation_steps = 50,
-    initial_epoch=12
+#     initial_epoch=12
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:

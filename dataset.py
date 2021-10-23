@@ -420,12 +420,11 @@ class ImageNet:
 
             if h_crop < height:
                 y = tf.random.uniform(
-                    (), minval=0, maxval=height - h_crop + 5, dtype=tf.int32)
-                got_img = False
+                    (), minval=0, maxval=height - h_crop, dtype=tf.int32)
 
                 if w_crop < width:
                     x = tf.random.uniform(
-                        (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
+                        (), minval=0, maxval=width - w_crop, dtype=tf.int32)
                     got_img = True
                     break
 
@@ -464,15 +463,17 @@ class ImageNet:
         if self.default_augment:
             ds = ds.map(self._inception_style_crop_single,
                         num_parallel_calls=AUTO)
+           
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
-
-            if self.color_jitter:
-                ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
+            
+            ds = ds.shuffle(10000)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)
             ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
-
+            
+            if self.color_jitter:
+                ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
             # ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
             if self.mixup:
                 ds = ds.map(self._mixup, num_parallel_calls=AUTO)
