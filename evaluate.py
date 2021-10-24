@@ -1,4 +1,4 @@
-"""Script for evaluating RegNetY. Supports TPU evaluation."""
+"""Script for evaluating RegNets. Supports TPU evaluation."""
 
 import tensorflow as tf
 import argparse
