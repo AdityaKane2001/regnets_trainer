@@ -56,7 +56,7 @@ class ImageNet:
         self.num_classes = cfg.num_classes
         self.color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
-        self.area_factor = 0.08
+        self.area_factor = 0.25
         self.no_aug = no_aug
         eigen_vals = tf.constant(
             [[0.2175, 0.0188, 0.0045],

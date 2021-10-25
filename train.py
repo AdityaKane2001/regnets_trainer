@@ -29,12 +29,12 @@ logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
 cluster_resolver, strategy = connect_to_tpu()
 
 train_cfg = get_train_config(
-    optimizer="sgd",
-    base_lr=0.1 * strategy.num_replicas_in_sync,
+    optimizer="adamw",
+    base_lr=0.001 * strategy.num_replicas_in_sync,
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
-    weight_decay=1e-5,
+    weight_decay=5e-5,
     momentum=0.9,
     label_smoothing=0.0,
     lr_schedule="half_cos",
@@ -73,7 +73,7 @@ misc_dict = {
 }
 
 now = datetime.now()
-date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
+date_time = now.strftime("%m_%d_%Y_%Hh%Mm%Ss")
 
 config_dict = get_config_dict(
     train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
@@ -83,10 +83,8 @@ logging.info(config_dict)
 wandb.init(entity="compyle", project="keras-regnet-training",
            job_type="train",  name="regnetx002" + "_" + date_time,
            config=config_dict)
-train_cfg = wandb.config.train_cfg
-train_cfg = from_dict(data_class=TrainConfig, data=train_cfg)
-
-
+# train_cfg = wandb.config.train_cfg
+# train_cfg = from_dict(data_class=TrainConfig, data=train_cfg)
 logging.info(f"Training options detected: {train_cfg}")
 logging.info("Preprocessing options detected.")
 logging.info(
@@ -106,32 +104,34 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-
-    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_01")
+    # model.load_weights("gs://ak-us-train/models/10_20_2021_17h07m02s/all_model_epoch_91")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
 # train_ds = train_ds.shuffle(300)
 val_ds = ImageNet(val_prep_cfg).make_dataset()
-val_ds = val_ds.shuffle(49)
+val_ds = val_ds.shuffle(48)
+
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1251*1
+count = 1252*91
 
-for i in range(len(callbacks)):
-    try:
-        callbacks[i].count = count
-    except:
-        pass
+# for i in range(len(callbacks)):
+#     try:
+#         callbacks[i].count = count
+#     except:
+#         pass
 
 history = model.fit(
     train_ds,
    	epochs=train_cfg.total_epochs,
     steps_per_epoch=1251,
    	validation_data=val_ds,
-    validation_steps=50,
+#     validation_steps=50,
    	callbacks=callbacks,
-    initial_epoch=1
+#     steps_per_epoch = 1251,
+    validation_steps = 49,
+    # initial_epoch=91
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
