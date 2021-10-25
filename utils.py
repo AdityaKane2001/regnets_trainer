@@ -159,11 +159,10 @@ def get_optimizer(cfg):
             nesterov=True,
         )
 
-#         opt = tfa.optimizers.MovingAverage(
-#             opt,
-#             average_decay=0.99999,
-#             start_step=6250,
-#         )
+        opt = tfa.optimizers.MovingAverage(
+            opt,
+            average_decay=0.99999,
+        )
         return opt
     elif cfg.optimizer == "adam":
         return tf.keras.optimizers.Adam(
@@ -255,7 +254,7 @@ def get_callbacks(cfg, timestr):
         lr_callback,
         tboard_callback,
         # best_model_checkpoint_callback,
-        #         average_saving_callback,
+        average_saving_callback,
         all_models_checkpoint_callback,
         WandbCallback(),
     ]

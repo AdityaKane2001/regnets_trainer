@@ -52,7 +52,7 @@ train_prep_cfg = get_preprocessing_config(
     augment_fn="default",
     num_classes=1000,
     color_jitter=False,
-    mixup=False,
+    mixup=True,
 )
 
 val_prep_cfg = get_preprocessing_config(
@@ -69,11 +69,12 @@ val_prep_cfg = get_preprocessing_config(
 
 misc_dict = {
     "Rescaling": "1/255",
-    "Normalization": "None"
+    "Normalization": "None",
+    "EMA_optimizer": True
 }
 
 now = datetime.now()
-date_time = now.strftime("%m_%d_%Y_%Hh%Mm%Ss")
+date_time = now.strftime("%m_%d_%Y_%Hh%Mm")
 
 config_dict = get_config_dict(
     train_prep_cfg, val_prep_cfg, train_cfg, misc=misc_dict)
@@ -131,6 +132,7 @@ history = model.fit(
    	callbacks=callbacks,
 #     steps_per_epoch = 1251,
     validation_steps = 49,
+
     # initial_epoch=91
 )
 

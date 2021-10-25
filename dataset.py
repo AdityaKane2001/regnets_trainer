@@ -350,6 +350,7 @@ class ImageNet:
         return (example["image"], tf.one_hot(example["label"], self.num_classes))
 
     def _mixup(self, image, label, alpha=0.2) -> Tuple:
+
         """
         Function to apply mixup augmentation. To be applied after
         one hot encoding and before batching.
