@@ -1,3 +1,4 @@
+"""Script for evaluating RegNets. Supports TPU evaluation."""
 
 import tensorflow as tf
 import argparse
@@ -5,7 +6,6 @@ import os
 import json
 import wandb
 import logging
-# Contrived example of generating a module named as a string
 
 from datetime import datetime
 from wandb.keras import WandbCallback
@@ -104,7 +104,8 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_23_2021_13h03m12s/all_model_epoch_98")
+
+    model.load_weights("gs://ak-us-train/models/10_24_2021_10h29m42s/all_model_epoch_96")
     logging.info("Model loaded")
 
 # train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -164,9 +165,25 @@ metrics1 = model.evaluate(val_ds, verbose=1)
 # #     initial_epoch=91
 # )
 
+<<<<<<< HEAD
 
 
 
+=======
+avg_loss = 0
+avg_acc = 0
+avg_top5 = 0
+
+for _ in range(10):
+    metrics = model.evaluate(val_ds, steps=50, verbose=1)
+    avg_loss += metrics[0]
+    avg_acc += metrics[1]
+    avg_top5 += metrics[2]
+
+print("Avg loss: ", avg_loss/10.)
+print("Avg acc: ", avg_acc/10.)
+print("Avg top5: ", avg_top5/10.)
+>>>>>>> 347ca997ff497185ebc50a2dfd811c9ff236338b
 
 # metrics2 = model.evaluate(val_ds, verbose=1)
 # metrics3 = model.evaluate(val_ds, verbose=1)
