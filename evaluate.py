@@ -1,3 +1,4 @@
+"""Script for evaluating RegNets. Supports TPU evaluation."""
 
 import tensorflow as tf
 import argparse
@@ -5,7 +6,6 @@ import os
 import json
 import wandb
 import logging
-# Contrived example of generating a module named as a string
 
 from datetime import datetime
 from wandb.keras import WandbCallback
