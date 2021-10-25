@@ -29,8 +29,8 @@ logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
 cluster_resolver, strategy = connect_to_tpu()
 
 train_cfg = get_train_config(
-    optimizer="sgd",
-    base_lr=0.1 * strategy.num_replicas_in_sync,
+    optimizer="adamw",
+    base_lr=0.001 * strategy.num_replicas_in_sync,
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
@@ -107,7 +107,7 @@ with strategy.scope():
         ],
     )
 
-    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_01")
+#     model.load_weights("gs://ak-us-train/models/10_23_2021_09h39m/all_model_epoch_93")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -116,13 +116,13 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 val_ds = val_ds.shuffle(49)
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1251*1
+count = 1251*93
 
-for i in range(len(callbacks)):
-    try:
-        callbacks[i].count = count
-    except:
-        pass
+# for i in range(len(callbacks)):
+#     try:
+#         callbacks[i].count = count
+#     except:
+#         pass
 
 history = model.fit(
     train_ds,
@@ -131,7 +131,7 @@ history = model.fit(
    	validation_data=val_ds,
     validation_steps=50,
    	callbacks=callbacks,
-    initial_epoch=1
+#     initial_epoch=93
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:

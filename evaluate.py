@@ -104,13 +104,46 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_96")
+    model.load_weights("gs://ak-us-train/models/10_23_2021_13h03m12s/all_model_epoch_98")
     logging.info("Model loaded")
 
 # train_ds = ImageNet(train_prep_cfg).make_dataset()
 val_ds = ImageNet(val_prep_cfg).make_dataset()
-# val_ds = val_ds.shuffle(49)
+val_ds = val_ds.shuffle(48)
 
+metrics1 = model.evaluate(val_ds, verbose=1)
+# def check_same(labels_, predictions_):
+#     _correct = 0
+#     _total = 0
+#     predictions = tf.math.argmax(predictions_, axis=-1)
+#     labels = tf.math.argmax(labels_, axis=-1)
+#     for i in range(len(labels)):
+#         _total += 1
+#         if predictions[i] == labels[i]:
+#             _correct +=1
+#     return _correct, _total
+
+
+
+
+# correct = 0
+# total = 0
+# for num, batch in enumerate(val_ds):
+#     images, labels = batch
+#     predictions = model.predict(images)
+    
+#     print("Batch ",num)
+#     print("len labels",len(labels))
+#     print("len preds",len(predictions))
+#     results = tf.keras.metrics.categorical_accuracy(labels, predictions)
+#     correct_, total_ = check_same(labels, predictions)
+#     correct += correct_
+#     total += total_
+#     print("correct",correct)
+#     print("total",total)
+#     print("#" * 15)
+
+# print(correct / total)
 
 # callbacks = get_callbacks(train_cfg, date_time)
 # count = 1252*91
@@ -121,17 +154,20 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 #     except:
 #         pass
 
-history = model.fit(
-    val_ds,
-   	epochs=1,
-#    	validation_data=val_ds,
-#    	callbacks=callbacks,
-    steps_per_epoch = 50,
-#     validation_steps = 49,
-#     initial_epoch=91
-)
+# history = model.fit(
+#     val_ds,
+#    	epochs=1,
+# #    	validation_data=val_ds,
+# #    	callbacks=callbacks,
+#     steps_per_epoch = 50,
+# #     validation_steps = 49,
+# #     initial_epoch=91
+# )
 
-metrics1 = model.evaluate(val_ds, steps=50, verbose=1)
+
+
+
+
 # metrics2 = model.evaluate(val_ds, verbose=1)
 # metrics3 = model.evaluate(val_ds, verbose=1)
 
