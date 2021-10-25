@@ -161,13 +161,13 @@ class ImageNet:
         """
 
         aug_images = tf.image.random_brightness(image, self.brightness_delta)
-        aug_images = tf.image.random_contrast(
-            aug_images, self.contrast_lower, self.contrast_upper
-        )
-        aug_images = tf.image.random_hue(aug_images, self.hue_delta)
-        aug_images = tf.image.random_saturation(
-            aug_images, self.saturation_lower, self.saturation_upper
-        )
+#         aug_images = tf.image.random_contrast(
+#             aug_images, self.contrast_lower, self.contrast_upper
+#         )
+#         aug_images = tf.image.random_hue(aug_images, self.hue_delta)
+#         aug_images = tf.image.random_saturation(
+#             aug_images, self.saturation_lower, self.saturation_upper
+#         )
 
         return aug_images, target
 
@@ -349,7 +349,8 @@ class ImageNet:
         """
         return (example["image"], tf.one_hot(example["label"], self.num_classes))
 
-    def _mixup(self, image, label,alpha=0.2) -> Tuple:
+    def _mixup(self, image, label, alpha=0.2) -> Tuple:
+
         """
         Function to apply mixup augmentation. To be applied after
         one hot encoding and before batching.
@@ -413,46 +414,30 @@ class ImageNet:
                 lambda: (w_crop, h_crop)
             )
 
-            if h_crop <= height:
-                if w_crop <= width:
-                    if h_crop == height:
-                        y = 0
-                        if w_crop == width:
-                            x = 0
-                        else:
-                            x = tf.random.uniform(
-                                (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
-                    else:
-                        y = tf.random.uniform(
-                            (), minval=0, maxval=height - h_crop + 5, dtype=tf.int32)
-                        if w_crop == width:
-                            x = 0
-                        else:
-                            x = tf.random.uniform(
-                                (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
+            x = tf.cast(0, tf.int32)
+            y = tf.cast(0, tf.int32)
 
-                    img = tf.cast(example["image"], tf.uint8)
-                    img = img[y: y + h_crop, x: x + w_crop, :]
-                    img = tf.cast(tf.math.round(tf.image.resize(
-                        img, (self.crop_size, self.crop_size))), tf.uint8)
+            got_img = False
+
+            if h_crop < height:
+                y = tf.random.uniform(
+                    (), minval=0, maxval=height - h_crop, dtype=tf.int32)
+
+                if w_crop < width:
+                    x = tf.random.uniform(
+                        (), minval=0, maxval=width - w_crop, dtype=tf.int32)
                     got_img = True
                     break
+
                 else:
-                    x = 0
-                    y = 0
-                    got_img = False
-                    img = tf.zeros(
-                        (self.crop_size, self.crop_size, 3), dtype=tf.uint8)
                     continue
-#                     return 0
             else:
-                x = 0
-                y = 0
-                got_img = False
-                img = tf.zeros(
-                    (self.crop_size, self.crop_size, 3), dtype=tf.uint8)
                 continue
-#                 return 0
+
+        img = tf.cast(example["image"], tf.uint8)
+        img = img[y: y + h_crop, x: x + w_crop, :]
+        img = tf.cast(tf.math.round(tf.image.resize(
+            img, (self.crop_size, self.crop_size))), tf.uint8)
 
         if got_img:
             return {
@@ -464,6 +449,7 @@ class ImageNet:
                 "synset": example["synset"],
             }
         else:
+            del img
             return self.validation_crop(example)
 
     def make_dataset(self):
@@ -478,15 +464,17 @@ class ImageNet:
         if self.default_augment:
             ds = ds.map(self._inception_style_crop_single,
                         num_parallel_calls=AUTO)
+           
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
-
-            if self.color_jitter:
-                ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
+            
+#             ds = ds.shuffle(10000)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)
             ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
-
+            
+            if self.color_jitter:
+                ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
             # ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
             if self.mixup:
                 ds = ds.map(self._mixup, num_parallel_calls=AUTO)

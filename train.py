@@ -29,8 +29,8 @@ logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
 cluster_resolver, strategy = connect_to_tpu()
 
 train_cfg = get_train_config(
-    optimizer="sgd",
-    base_lr=0.1 * strategy.num_replicas_in_sync,
+    optimizer="adamw",
+    base_lr=0.001 * strategy.num_replicas_in_sync,
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
@@ -109,6 +109,7 @@ with strategy.scope():
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
+# train_ds = train_ds.shuffle(300)
 val_ds = ImageNet(val_prep_cfg).make_dataset()
 val_ds = val_ds.shuffle(48)
 
@@ -125,10 +126,13 @@ count = 1252*91
 history = model.fit(
     train_ds,
    	epochs=train_cfg.total_epochs,
+    steps_per_epoch=1251,
    	validation_data=val_ds,
+#     validation_steps=50,
    	callbacks=callbacks,
-    steps_per_epoch = 1252,
-    validation_steps = 50,
+#     steps_per_epoch = 1251,
+    validation_steps = 49,
+
     # initial_epoch=91
 )
 
