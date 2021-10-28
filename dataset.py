@@ -420,11 +420,11 @@ class ImageNet:
 
             if h_crop < height:
                 y = tf.random.uniform(
-                    (), minval=0, maxval=height - h_crop, dtype=tf.int32)
+                    (), minval=0, maxval=height - h_crop + 1, dtype=tf.int32)
 
                 if w_crop < width:
                     x = tf.random.uniform(
-                        (), minval=0, maxval=width - w_crop, dtype=tf.int32)
+                        (), minval=0, maxval=width - w_crop + 1, dtype=tf.int32)
                     got_img = True
                     break
 
