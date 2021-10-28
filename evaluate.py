@@ -1,4 +1,3 @@
-"""Script for evaluating RegNets. Supports TPU evaluation."""
 
 import tensorflow as tf
 import argparse
@@ -6,6 +5,7 @@ import os
 import json
 import wandb
 import logging
+# Contrived example of generating a module named as a string
 
 from datetime import datetime
 from wandb.keras import WandbCallback
@@ -28,8 +28,8 @@ logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
 cluster_resolver, strategy = connect_to_tpu()
 
 train_cfg = get_train_config(
-    optimizer="sgd",
-    base_lr=0,
+    optimizer="adamw",
+    base_lr=0.001,
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
@@ -93,7 +93,7 @@ logging.info(
 
 with strategy.scope():
     optim = get_optimizer(train_cfg)
-    model = tf.keras.applications.RegNetX002()
+    model = tf.keras.applications.RegNetX006()
     
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
@@ -104,7 +104,7 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_24_2021_10h29m42s/all_model_epoch_96")
+    model.load_weights("gs://ak-us-train/models/10_26_2021_02h19m15s/all_model_epoch_98")
     logging.info("Model loaded")
 
 # train_ds = ImageNet(train_prep_cfg).make_dataset()

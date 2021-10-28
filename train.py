@@ -30,7 +30,7 @@ cluster_resolver, strategy = connect_to_tpu()
 
 train_cfg = get_train_config(
     optimizer="adamw",
-    base_lr=0.001 * strategy.num_replicas_in_sync,
+    base_lr=0.001 * strategy.num_replicas_in_sync,       #################################################change this!!
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
@@ -81,7 +81,7 @@ config_dict = get_config_dict(
 logging.info(config_dict)
 
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name="regnetx002" + "_" + date_time,
+           job_type="train",  name="regnetx016" + "_" + date_time, #################################################change this!!
            config=config_dict)
 # train_cfg = wandb.config.train_cfg
 # train_cfg = from_dict(data_class=TrainConfig, data=train_cfg)
@@ -94,7 +94,7 @@ logging.info(
 
 with strategy.scope():
     optim = get_optimizer(train_cfg)
-    model = tf.keras.applications.RegNetX002()
+    model = tf.keras.applications.RegNetX016() #################################################change this!!
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
             from_logits=True, label_smoothing=train_cfg.label_smoothing),
@@ -104,7 +104,7 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    # model.load_weights("gs://ak-us-train/models/10_20_2021_17h07m02s/all_model_epoch_91")
+    model.load_weights("gs://ak-us-train/models/10_27_2021_10h52m43s/all_model_epoch_06")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -114,13 +114,13 @@ val_ds = val_ds.shuffle(48)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1252*91
+count = 1252*7
 
-# for i in range(len(callbacks)):
-#     try:
-#         callbacks[i].count = count
-#     except:
-#         pass
+for i in range(len(callbacks)):
+    try:
+        callbacks[i].count = count
+    except:
+        pass
 
 history = model.fit(
     train_ds,
@@ -131,7 +131,7 @@ history = model.fit(
    	callbacks=callbacks,
 #     steps_per_epoch = 1251,
     validation_steps = 49,
-    # initial_epoch=91
+    initial_epoch=7
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
