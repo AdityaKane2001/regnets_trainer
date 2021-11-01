@@ -161,13 +161,13 @@ class ImageNet:
         """
 
         aug_images = tf.image.random_brightness(image, self.brightness_delta)
-#         aug_images = tf.image.random_contrast(
-#             aug_images, self.contrast_lower, self.contrast_upper
-#         )
-#         aug_images = tf.image.random_hue(aug_images, self.hue_delta)
-#         aug_images = tf.image.random_saturation(
-#             aug_images, self.saturation_lower, self.saturation_upper
-#         )
+        aug_images = tf.image.random_contrast(
+            aug_images, self.contrast_lower, self.contrast_upper
+        )
+        aug_images = tf.image.random_hue(aug_images, self.hue_delta)
+        aug_images = tf.image.random_saturation(
+            aug_images, self.saturation_lower, self.saturation_upper
+        )
 
         return aug_images, target
 
@@ -420,11 +420,12 @@ class ImageNet:
 
             if h_crop < height:
                 y = tf.random.uniform(
-                    (), minval=0, maxval=height - h_crop, dtype=tf.int32)
+                    (), minval=0, maxval=height - h_crop + 5, dtype=tf.int32)
+                got_img = False
 
                 if w_crop < width:
                     x = tf.random.uniform(
-                        (), minval=0, maxval=width - w_crop, dtype=tf.int32)
+                        (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
                     got_img = True
                     break
 
@@ -464,17 +465,15 @@ class ImageNet:
             ds = ds.map(self._inception_style_crop_single,
                         num_parallel_calls=AUTO)
             ds = ds.prefetch(AUTO)
-           
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
-            
-#             ds = ds.shuffle(10000)
+
+            if self.color_jitter:
+                ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)
             ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
-            
-            if self.color_jitter:
-                ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
+
             # ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
             if self.mixup:
                 ds = ds.map(self._mixup, num_parallel_calls=AUTO)
@@ -488,7 +487,6 @@ class ImageNet:
 
         else:
             ds = ds.map(self.augment_fn, num_parallel_calls=AUTO)
-
         ds = ds.prefetch(AUTO)
+        
         return ds
-

@@ -1,3 +1,4 @@
+"""Script for evaluating RegNets. Supports TPU evaluation."""
 
 import tensorflow as tf
 import argparse
@@ -5,7 +6,6 @@ import os
 import json
 import wandb
 import logging
-# Contrived example of generating a module named as a string
 
 from datetime import datetime
 from wandb.keras import WandbCallback
@@ -105,7 +105,7 @@ logging.info(
 
 with strategy.scope():
     optim = get_optimizer(train_cfg)
-    model = tf.keras.applications.RegNetX002()
+    model = tf.keras.applications.RegNetX006()
     
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
@@ -116,7 +116,7 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_17_2021_20h24m/all_model_epoch_96")
+    model.load_weights("gs://ak-us-train/models/10_26_2021_08h43m17s/all_model_epoch_97")
     logging.info("Model loaded")
 
 # train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -133,17 +133,30 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 #     except:
 #         pass
 
-history = model.fit(
-    val_ds,
-   	epochs=1,
-#    	validation_data=val_ds,
-#    	callbacks=callbacks,
-    steps_per_epoch = 50,
-#     validation_steps = 49,
-#     initial_epoch=91
-)
+# history = model.fit(
+#     val_ds,
+#    	epochs=1,
+# #    	validation_data=val_ds,
+# #    	callbacks=callbacks,
+#     steps_per_epoch = 50,
+# #     validation_steps = 49,
+# #     initial_epoch=91
+# )
 
-metrics1 = model.evaluate(val_ds, steps=50, verbose=1)
+avg_loss = 0
+avg_acc = 0
+avg_top5 = 0
+
+for _ in range(10):
+    metrics = model.evaluate(val_ds, steps=50, verbose=1)
+    avg_loss += metrics[0]
+    avg_acc += metrics[1]
+    avg_top5 += metrics[2]
+
+print("Avg loss: ", avg_loss/10.)
+print("Avg acc: ", avg_acc/10.)
+print("Avg top5: ", avg_top5/10.)
+
 # metrics2 = model.evaluate(val_ds, verbose=1)
 # metrics3 = model.evaluate(val_ds, verbose=1)
 
