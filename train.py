@@ -134,7 +134,8 @@ history = model.fit(
    	callbacks=callbacks,
 #     steps_per_epoch = 1251,
     validation_steps = 49,
-#     initial_epoch=7
+
+    # initial_epoch=91
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
