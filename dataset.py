@@ -56,7 +56,7 @@ class ImageNet:
         self.num_classes = cfg.num_classes
         self.color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
-        self.area_factor = 0.25
+        self.area_factor = 0.08
         self.no_aug = no_aug
         eigen_vals = tf.constant(
             [[0.2175, 0.0188, 0.0045],
@@ -349,7 +349,7 @@ class ImageNet:
         """
         return (example["image"], tf.one_hot(example["label"], self.num_classes))
 
-    def _mixup(self, image, label,alpha=0.2) -> Tuple:
+    def _mixup(self, image, label, alpha=0.2) -> Tuple:
         """
         Function to apply mixup augmentation. To be applied after
         one hot encoding and before batching.
@@ -413,46 +413,30 @@ class ImageNet:
                 lambda: (w_crop, h_crop)
             )
 
-            if h_crop <= height:
-                if w_crop <= width:
-                    if h_crop == height:
-                        y = 0
-                        if w_crop == width:
-                            x = 0
-                        else:
-                            x = tf.random.uniform(
-                                (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
-                    else:
-                        y = tf.random.uniform(
-                            (), minval=0, maxval=height - h_crop + 5, dtype=tf.int32)
-                        if w_crop == width:
-                            x = 0
-                        else:
-                            x = tf.random.uniform(
-                                (), minval=0, maxval=width - w_crop + 5, dtype=tf.int32)
+            x = tf.cast(0, tf.int32)
+            y = tf.cast(0, tf.int32)
 
-                    img = tf.cast(example["image"], tf.uint8)
-                    img = img[y: y + h_crop, x: x + w_crop, :]
-                    img = tf.cast(tf.math.round(tf.image.resize(
-                        img, (self.crop_size, self.crop_size))), tf.uint8)
+            got_img = False
+
+            if h_crop < height:
+                y = tf.random.uniform(
+                    (), minval=0, maxval=height - h_crop + 1, dtype=tf.int32)
+
+                if w_crop < width:
+                    x = tf.random.uniform(
+                        (), minval=0, maxval=width - w_crop + 1, dtype=tf.int32)
                     got_img = True
                     break
+
                 else:
-                    x = 0
-                    y = 0
-                    got_img = False
-                    img = tf.zeros(
-                        (self.crop_size, self.crop_size, 3), dtype=tf.uint8)
                     continue
-#                     return 0
             else:
-                x = 0
-                y = 0
-                got_img = False
-                img = tf.zeros(
-                    (self.crop_size, self.crop_size, 3), dtype=tf.uint8)
                 continue
-#                 return 0
+
+        img = tf.cast(example["image"], tf.uint8)
+        img = img[y: y + h_crop, x: x + w_crop, :]
+        img = tf.cast(tf.math.round(tf.image.resize(
+            img, (self.crop_size, self.crop_size))), tf.uint8)
 
         if got_img:
             return {
@@ -464,6 +448,7 @@ class ImageNet:
                 "synset": example["synset"],
             }
         else:
+            del img
             return self.validation_crop(example)
 
     def make_dataset(self):
@@ -478,6 +463,7 @@ class ImageNet:
         if self.default_augment:
             ds = ds.map(self._inception_style_crop_single,
                         num_parallel_calls=AUTO)
+            ds = ds.prefetch(AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
 
@@ -493,11 +479,13 @@ class ImageNet:
 
         elif self.val_augment:
             ds = ds.map(self.validation_crop, num_parallel_calls=AUTO)
+            ds = ds.prefetch(AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)
 
         else:
             ds = ds.map(self.augment_fn, num_parallel_calls=AUTO)
-
+        ds = ds.prefetch(AUTO)
+        
         return ds
