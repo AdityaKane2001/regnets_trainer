@@ -463,6 +463,7 @@ class ImageNet:
         if self.default_augment:
             ds = ds.map(self._inception_style_crop_single,
                         num_parallel_calls=AUTO)
+            ds = ds.prefetch(AUTO)
            
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
@@ -480,6 +481,7 @@ class ImageNet:
 
         elif self.val_augment:
             ds = ds.map(self.validation_crop, num_parallel_calls=AUTO)
+            ds = ds.prefetch(AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)
@@ -487,4 +489,6 @@ class ImageNet:
         else:
             ds = ds.map(self.augment_fn, num_parallel_calls=AUTO)
 
+        ds = ds.prefetch(AUTO)
         return ds
+

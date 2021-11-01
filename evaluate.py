@@ -13,6 +13,18 @@ from dataset import ImageNet
 from utils import *
 from dacite import from_dict
 
+
+def quicksort(array):
+    if len(array) <= 1:
+        return array
+    else:
+        pivot = array[0]
+        less = [i for i in array[1:] if i <= pivot]
+        greater = [i for i in array[1:] if i > pivot]
+        return quicksort(less) + [pivot] + quicksort(greater)
+
+
+
 NORMALIZED = False
 tf.keras.backend.clear_session()
 
@@ -139,3 +151,5 @@ metrics1 = model.evaluate(val_ds, steps=50, verbose=1)
 # print(metrics)
 # with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
 #    json.dump(str(history.history), f)
+
+
