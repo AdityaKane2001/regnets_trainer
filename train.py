@@ -52,7 +52,7 @@ train_prep_cfg = get_preprocessing_config(
     augment_fn="default",
     num_classes=1000,
     color_jitter=False,
-    mixup=False,
+    mixup=True,
 )
 
 val_prep_cfg = get_preprocessing_config(
@@ -81,7 +81,7 @@ config_dict = get_config_dict(
 logging.info(config_dict)
 
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name="regnetx002" + "_" + date_time,
+           job_type="train",  name="regnetx064" + "_" + date_time,
            config=config_dict)
 # train_cfg = wandb.config.train_cfg
 # train_cfg = from_dict(data_class=TrainConfig, data=train_cfg)
@@ -94,7 +94,7 @@ logging.info(
 
 with strategy.scope():
     optim = get_optimizer(train_cfg)
-    model = tf.keras.applications.RegNetX002()
+    model = tf.keras.applications.RegNetX120()
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
             from_logits=True, label_smoothing=train_cfg.label_smoothing),
@@ -104,7 +104,7 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    # model.load_weights("gs://ak-us-train/models/10_20_2021_17h07m02s/all_model_epoch_91")
+#     model.load_weights("gs://ak-us-train/models/10_30_2021_17h41m24s/all_model_epoch_78")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -114,7 +114,7 @@ val_ds = val_ds.shuffle(48)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1252*91
+count = 1252*78
 
 # for i in range(len(callbacks)):
 #     try:
@@ -131,7 +131,7 @@ history = model.fit(
    	callbacks=callbacks,
 #     steps_per_epoch = 1251,
     validation_steps = 49,
-    # initial_epoch=91
+#     initial_epoch=78
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
