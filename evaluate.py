@@ -93,7 +93,7 @@ logging.info(
 
 with strategy.scope():
     optim = get_optimizer(train_cfg)
-    model = tf.keras.applications.RegNetX006()
+    model = tf.keras.applications.RegNetX064()
     
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
@@ -104,7 +104,9 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_26_2021_02h19m15s/all_model_epoch_98")
+
+    model.load_weights("gs://ak-us-train/models/10_31_2021_06h04m12s/all_model_epoch_96")
+
     logging.info("Model loaded")
 
 # train_ds = ImageNet(train_prep_cfg).make_dataset()
