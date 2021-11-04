@@ -253,7 +253,7 @@ def get_callbacks(cfg, timestr):
 
     return [
         lr_callback,
-        tboard_callback,
+#         tboard_callback,
         # best_model_checkpoint_callback,
         #         average_saving_callback,
         all_models_checkpoint_callback,

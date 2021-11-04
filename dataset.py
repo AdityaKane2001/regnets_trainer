@@ -56,7 +56,7 @@ class ImageNet:
         self.num_classes = cfg.num_classes
         self.color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
-        self.area_factor = 0.08
+        self.area_factor = 0.25
         self.no_aug = no_aug
         eigen_vals = tf.constant(
             [[0.2175, 0.0188, 0.0045],
@@ -327,6 +327,8 @@ class ImageNet:
         if x <= 0 or y <= 0:
             tf.print(x, y)
         img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
+        img = tf.cast(tf.math.round(tf.image.resize(
+            img, (self.crop_size, self.crop_size))), tf.uint8)
 
         return {
             "image": tf.cast(img, tf.uint8),

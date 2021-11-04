@@ -1,3 +1,4 @@
+"""Script for evaluating RegNets. Supports TPU evaluation."""
 
 import tensorflow as tf
 import argparse
@@ -5,7 +6,6 @@ import os
 import json
 import wandb
 import logging
-# Contrived example of generating a module named as a string
 
 from datetime import datetime
 from wandb.keras import WandbCallback
@@ -28,8 +28,8 @@ logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
 cluster_resolver, strategy = connect_to_tpu()
 
 train_cfg = get_train_config(
-    optimizer="adamw",
-    base_lr=0.001,
+    optimizer="sgd",
+    base_lr=0,
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
@@ -93,7 +93,7 @@ logging.info(
 
 with strategy.scope():
     optim = get_optimizer(train_cfg)
-    model = tf.keras.applications.RegNetX064()
+    model = tf.keras.applications.RegNetX160()
     
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
@@ -104,13 +104,28 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
+    for i in range(92,95):
+        print("Epoch "+str(i), "#" * 25)
+        model.load_weights("gs://ak-us-train/models/11_03_2021_08h47m50s/all_model_epoch_"+str(i))
+        logging.info("Model loaded")
 
-    model.load_weights("gs://ak-us-train/models/10_31_2021_06h04m12s/all_model_epoch_96")
+        val_ds = ImageNet(val_prep_cfg).make_dataset()
 
-    logging.info("Model loaded")
+        avg_loss = 0
+        avg_acc = 0
+        avg_top5 = 0
 
+        for _ in range(10):
+            metrics = model.evaluate(val_ds, steps=50, verbose=1)
+            avg_loss += metrics[0]
+            avg_acc += metrics[1]
+            avg_top5 += metrics[2]
+
+        print("Avg loss: ", avg_loss/10.)
+        print("Avg acc: ", avg_acc/10.)
+        print("Avg top5: ", avg_top5/10.)
 # train_ds = ImageNet(train_prep_cfg).make_dataset()
-val_ds = ImageNet(val_prep_cfg).make_dataset()
+
 # val_ds = val_ds.shuffle(49)
 
 
@@ -133,19 +148,7 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 # #     initial_epoch=91
 # )
 
-avg_loss = 0
-avg_acc = 0
-avg_top5 = 0
 
-for _ in range(10):
-    metrics = model.evaluate(val_ds, steps=50, verbose=1)
-    avg_loss += metrics[0]
-    avg_acc += metrics[1]
-    avg_top5 += metrics[2]
-
-print("Avg loss: ", avg_loss/10.)
-print("Avg acc: ", avg_acc/10.)
-print("Avg top5: ", avg_top5/10.)
 
 # metrics2 = model.evaluate(val_ds, verbose=1)
 # metrics3 = model.evaluate(val_ds, verbose=1)

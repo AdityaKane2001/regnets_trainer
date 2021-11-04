@@ -19,9 +19,9 @@ NORMALIZED = False
 
 log_location = "gs://ak-us-train"
 train_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://ak-imagenet-new/train/train_*.tfrecord")
+    "gs://ak-imagenet-new-2/train/train_*.tfrecord")
 val_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://ak-imagenet-new/valid/valid_*.tfrecord")
+    "gs://ak-imagenet-new-2/valid/valid_*.tfrecord")
 
 logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
                     datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO)
@@ -52,7 +52,7 @@ train_prep_cfg = get_preprocessing_config(
     augment_fn="default",
     num_classes=1000,
     color_jitter=False,
-    mixup=True,
+    mixup=False,
 )
 
 val_prep_cfg = get_preprocessing_config(
@@ -81,7 +81,7 @@ config_dict = get_config_dict(
 logging.info(config_dict)
 
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name="regnetx016" + "_" + date_time, #################################################change this!!
+           job_type="train",  name="regnety002" + "_" + date_time, #################################################change this!!
 
            config=config_dict)
 # train_cfg = wandb.config.train_cfg
@@ -96,7 +96,7 @@ logging.info(
 with strategy.scope():
     optim = get_optimizer(train_cfg)
 
-    model = tf.keras.applications.RegNetX016() #################################################change this!!
+    model = tf.keras.applications.RegNetY002() #################################################change this!!
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
             from_logits=True, label_smoothing=train_cfg.label_smoothing),
@@ -106,7 +106,7 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-#     model.load_weights("gs://ak-us-train/models/10_30_2021_17h41m24s/all_model_epoch_78")
+    model.load_weights("gs://ak-us-train/models/11_03_2021_18h37m16s/all_model_epoch_06")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -116,13 +116,13 @@ val_ds = val_ds.shuffle(48)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1252*78
+count = 1252*5
 
-# for i in range(len(callbacks)):
-#     try:
-#         callbacks[i].count = count
-#     except:
-#         pass
+for i in range(len(callbacks)):
+    try:
+        callbacks[i].count = count
+    except:
+        pass
 
 history = model.fit(
     train_ds,
@@ -133,7 +133,7 @@ history = model.fit(
    	callbacks=callbacks,
 #     steps_per_epoch = 1251,
     validation_steps = 49,
-#     initial_epoch=7
+    initial_epoch=5
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
