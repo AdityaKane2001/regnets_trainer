@@ -327,6 +327,8 @@ class ImageNet:
         if x <= 0 or y <= 0:
             tf.print(x, y)
         img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
+        img = tf.cast(tf.math.round(tf.image.resize(
+            img, (self.crop_size, self.crop_size))), tf.uint8)
 
         return {
             "image": tf.cast(img, tf.uint8),
@@ -349,7 +351,7 @@ class ImageNet:
         """
         return (example["image"], tf.one_hot(example["label"], self.num_classes))
 
-    def _mixup(self, image, label, alpha=0.2) -> Tuple:
+    def _mixup(self, image, label, alpha=0.3) -> Tuple:
         """
         Function to apply mixup augmentation. To be applied after
         one hot encoding and before batching.

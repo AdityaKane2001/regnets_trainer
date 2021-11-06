@@ -14,7 +14,7 @@ from utils import *
 from dacite import from_dict
 
 NORMALIZED = False
-tf.keras.backend.clear_session()
+# tf.keras.backend.clear_session()
 
 log_location = "gs://ak-us-train"
 train_tfrecs_filepath = tf.io.gfile.glob(
@@ -104,11 +104,28 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/10_31_2021_06h04m12s/all_model_epoch_96")
-    logging.info("Model loaded")
+    for i in range(94,100):
+        print("Epoch "+str(i), "#" * 25)
+        model.load_weights("gs://ak-us-train/models/11_05_2021_05h00m49s/all_model_epoch_"+str(i))
+        logging.info("Model loaded")
 
+        val_ds = ImageNet(val_prep_cfg).make_dataset()
+
+        avg_loss = 0
+        avg_acc = 0
+        avg_top5 = 0
+
+        for _ in range(10):
+            metrics = model.evaluate(val_ds, steps=50, verbose=1)
+            avg_loss += metrics[0]
+            avg_acc += metrics[1]
+            avg_top5 += metrics[2]
+
+        print("Avg loss: ", avg_loss/10.)
+        print("Avg acc: ", avg_acc/10.)
+        print("Avg top5: ", avg_top5/10.)
 # train_ds = ImageNet(train_prep_cfg).make_dataset()
-val_ds = ImageNet(val_prep_cfg).make_dataset()
+
 # val_ds = val_ds.shuffle(49)
 
 
@@ -131,19 +148,7 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 # #     initial_epoch=91
 # )
 
-avg_loss = 0
-avg_acc = 0
-avg_top5 = 0
 
-for _ in range(10):
-    metrics = model.evaluate(val_ds, steps=50, verbose=1)
-    avg_loss += metrics[0]
-    avg_acc += metrics[1]
-    avg_top5 += metrics[2]
-
-print("Avg loss: ", avg_loss/10.)
-print("Avg acc: ", avg_acc/10.)
-print("Avg top5: ", avg_top5/10.)
 
 # metrics2 = model.evaluate(val_ds, verbose=1)
 # metrics3 = model.evaluate(val_ds, verbose=1)

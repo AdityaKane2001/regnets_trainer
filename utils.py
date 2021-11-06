@@ -304,9 +304,8 @@ def connect_to_tpu(tpu_address: str = None):
         return cluster_resolver, strategy
     else:
         try:
-            cluster_resolver = (
-                tf.distribute.cluster_resolver.TPUClusterResolver.connect()
-            )
+            logging.info("Trying to connect...")
+            cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver.connect(tpu="ak-us-tpu-6")
             strategy = tf.distribute.TPUStrategy(cluster_resolver)
             logging.info(f"Running on TPU {cluster_resolver.master()}")
             logging.info(f"REPLICAS: {strategy.num_replicas_in_sync}")
