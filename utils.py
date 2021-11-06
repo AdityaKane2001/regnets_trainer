@@ -257,7 +257,7 @@ def get_callbacks(cfg, timestr):
         # best_model_checkpoint_callback,
         #         average_saving_callback,
         all_models_checkpoint_callback,
-        WandbCallback(),
+        WandbCallback(save_model=False),
     ]
 
 

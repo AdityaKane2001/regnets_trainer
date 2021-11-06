@@ -327,8 +327,7 @@ class ImageNet:
         if x <= 0 or y <= 0:
             tf.print(x, y)
         img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
-        img = tf.cast(tf.math.round(tf.image.resize(
-            img, (self.crop_size, self.crop_size))), tf.uint8)
+
 
         return {
             "image": tf.cast(img, tf.uint8),
@@ -377,36 +376,54 @@ class ImageNet:
         img = l * image1 + (1 - l) * image2
         lab = l * label1 + (1 - l) * label2
 
-        img = tf.cast(img, tf.uint8)
-
+        img = tf.cast(tf.math.round(tf.image.resize(
+            img, (self.crop_size, self.crop_size))), tf.uint8)
+        
         return img, lab
 
-    def _get_random_dims(self, area):
-        target_area = tf.random.uniform(
-            (), minval=self.area_factor, maxval=1) * area
-        aspect_ratio = tf.random.uniform((), minval=3./4., maxval=4./3.)
+    def _get_random_dims(self, area, height, width, max_iter=10):
+        """
+        Working logic:
+        1. Initialize values, start for loop and generate required random values.
+        2. If h_crop and w_crop (i.e. the generated values) are lesser than image dimensions,
+            then generate random x and y values.
+        3. Cache these x and y values if they are useful (BOTH MUST BE USEFUL)
+        4. If cached values exist, return them, else return bad values (atleast one of x and y will contain -1).
 
-        w_crop = tf.cast(
-            tf.math.round(
-                tf.math.sqrt(
-                    target_area * aspect_ratio
-                )), tf.int32)
-        h_crop = tf.cast(
-            tf.math.round(
-                tf.math.sqrt(
-                    target_area / aspect_ratio
-                )), tf.int32)
+        Run cases:
+        1. Cached values can be filled multiple times. Any time, they will be useful. 
+        2. If there were no (or partial) cached values after 10 iterations, we can safely apply validation crop
 
-        return w_crop, h_crop
+        Pros:
+        1. The graph is constant, since we are not using break statement.
+        2. From augmentation POV, the function remains constant.
 
-    def _inception_style_crop_single(self, example, max_iter=10):
-        height = tf.cast(example["height"], tf.int32)
-        width = tf.cast(example["width"], tf.int32)
-        area = tf.cast(height * width, tf.float32)
+        Cons:
+        1. We run the function 10 times. However note that even if we encounter multiple valid values,
+            all of them are valid. Thus this maintains corretness of the function. 
+        """
+        w_crop = tf.cast(-1, tf.int32)
+        h_crop = tf.cast(-1, tf.int32)
+
+        x_cache = -1
+        y_cache = -1
 
         for _ in tf.range(max_iter):
-            w_crop, h_crop = self._get_random_dims(area)
+            target_area = tf.random.uniform(
+                (), minval=self.area_factor, maxval=1) * area
+            aspect_ratio = tf.random.uniform((), minval=3./4., maxval=4./3.)
 
+            w_crop = tf.cast(
+                tf.math.round(
+                    tf.math.sqrt(
+                        target_area * aspect_ratio
+                    )), tf.int32)
+            h_crop = tf.cast(
+                tf.math.round(
+                    tf.math.sqrt(
+                        target_area / aspect_ratio
+                    )), tf.int32)
+            
             prob = tf.random.uniform((), minval=0.0, maxval=1.0)
 
             w_crop, h_crop = tf.cond(
@@ -414,44 +431,109 @@ class ImageNet:
                 lambda: (h_crop, w_crop),
                 lambda: (w_crop, h_crop)
             )
-
-            x = tf.cast(0, tf.int32)
-            y = tf.cast(0, tf.int32)
-
-            got_img = False
+            x = -1
+            y = -1
+            
 
             if h_crop < height:
                 y = tf.random.uniform(
-                    (), minval=0, maxval=height - h_crop + 1, dtype=tf.int32)
+                    (), minval=0, maxval=height - h_crop, dtype=tf.int32)
 
                 if w_crop < width:
                     x = tf.random.uniform(
-                        (), minval=0, maxval=width - w_crop + 1, dtype=tf.int32)
-                    got_img = True
-                    break
-
-                else:
-                    continue
+                        (), minval=0, maxval=width - w_crop, dtype=tf.int32)
+                    x_cache = x
+                    y_cache = y
+                    
+        if x_cache>-1:
+            if y_cache>-1:
+                return x_cache, y_cache, w_crop, h_crop
             else:
-                continue
+                return x, y, w_crop, h_crop
+        else:
+            return x, y, w_crop, h_crop
+
+    def _inception_style_crop_single(self, example, max_iter=10):
+        """
+        Working logic:
+        1. Get random values from generate random dims function (see its docstring).
+        2. If the values are good (both > -1) then do inception style cropping
+        2. In all other cases do valiation cropping
+
+
+        """
+
+
+        height = tf.cast(example["height"], tf.int32)
+        width = tf.cast(example["width"], tf.int32)
+        area = tf.cast(height * width, tf.float32)
+
+        x, y, w_crop, h_crop = self._get_random_dims(area, height, width)
 
         img = tf.cast(example["image"], tf.uint8)
-        img = img[y: y + h_crop, x: x + w_crop, :]
-        img = tf.cast(tf.math.round(tf.image.resize(
-            img, (self.crop_size, self.crop_size))), tf.uint8)
+        w = width
+        h = height
 
-        if got_img:
-            return {
-                "image": img,
-                "height": self.crop_size,
-                "width": self.crop_size,
-                "filename": example["filename"],
-                "label": example["label"],
-                "synset": example["synset"],
-            }
+        if x > -1:
+            if y > -1:
+                # Inception
+                w_resize = tf.cast(0, tf.int32)
+                h_resize = tf.cast(0, tf.int32)
+                img = img[y: y + h_crop, x: x + w_crop, :]
+                img = tf.cast(tf.math.round(tf.image.resize(
+                    img, (self.crop_size, self.crop_size))), tf.uint8)
+            else:
+                # Validation
+                if w < h:
+                    w_resize, h_resize = tf.cast(self.resize_pre_crop, tf.int32), tf.cast(
+                        ((h / w) * self.resize_pre_crop), tf.int32)
+                    img = tf.image.resize(img, (h_resize, w_resize))
+                elif h <= w:
+                    w_resize, h_resize = tf.cast(
+                        ((w / h) * self.resize_pre_crop), tf.int32), tf.cast(self.resize_pre_crop, tf.int32)
+                    img = tf.image.resize(img, (h_resize, w_resize))
+                else:
+                    w_resize = tf.cast(w, tf.int32)
+                    h_resize = tf.cast(h, tf.int32)
+                    img = tf.image.resize(img, (h_resize, w_resize))
+
+                x = tf.cast(tf.math.ceil((w_resize - self.crop_size)/2), tf.int32)
+                y = tf.cast(tf.math.ceil((h_resize - self.crop_size)/2), tf.int32)
+
+                img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
+                img = tf.cast(tf.math.round(tf.image.resize(
+                    img, (self.crop_size, self.crop_size))), tf.uint8)
+
         else:
-            del img
-            return self.validation_crop(example)
+            #Valiadation
+            if w < h:
+                w_resize, h_resize = tf.cast(self.resize_pre_crop, tf.int32), tf.cast(
+                    ((h / w) * self.resize_pre_crop), tf.int32)
+                img = tf.image.resize(img, (h_resize, w_resize))
+            elif h <= w:
+                w_resize, h_resize = tf.cast(
+                    ((w / h) * self.resize_pre_crop), tf.int32), tf.cast(self.resize_pre_crop, tf.int32)
+                img = tf.image.resize(img, (h_resize, w_resize))
+            else:
+                w_resize = tf.cast(w, tf.int32)
+                h_resize = tf.cast(h, tf.int32)
+                img = tf.image.resize(img, (h_resize, w_resize))
+
+            x = tf.cast(tf.math.ceil((w_resize - self.crop_size)/2), tf.int32)
+            y = tf.cast(tf.math.ceil((h_resize - self.crop_size)/2), tf.int32)
+
+            img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
+            img = tf.cast(tf.math.round(tf.image.resize(
+                img, (self.crop_size, self.crop_size))), tf.uint8)
+        
+        return {
+            "image": img,
+            "height": self.crop_size,
+            "width": self.crop_size,
+            "filename": example["filename"],
+            "label": example["label"],
+            "synset": example["synset"],
+        }
 
     def make_dataset(self):
 
@@ -473,11 +555,12 @@ class ImageNet:
                 ds = ds.map(self._color_jitter, num_parallel_calls=AUTO)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)
+            if self.mixup:
+                ds = ds.map(self._mixup, num_parallel_calls=AUTO)
             ds = ds.map(self._pca_jitter, num_parallel_calls=AUTO)
 
             # ds = ds.map(self._inception_style_crop, num_parallel_calls=AUTO)
-            if self.mixup:
-                ds = ds.map(self._mixup, num_parallel_calls=AUTO)
+            
 
         elif self.val_augment:
             ds = ds.map(self.validation_crop, num_parallel_calls=AUTO)

@@ -19,9 +19,9 @@ NORMALIZED = False
 
 log_location = "gs://ak-us-train"
 train_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://ak-imagenet-new-2/train/train_*.tfrecord")
+    "gs://ak-imagenet-new/train/train_*.tfrecord")
 val_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://ak-imagenet-new-2/valid/valid_*.tfrecord")
+    "gs://ak-imagenet-new/valid/valid_*.tfrecord")
 
 logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
                     datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO)
@@ -93,6 +93,8 @@ logging.info(
 logging.info(
     f"Validating on TFRecords: {val_prep_cfg.tfrecs_filepath[0]} to {val_prep_cfg.tfrecs_filepath[-1]}")
 
+INIT_EPOCH = 48
+
 with strategy.scope():
     optim = get_optimizer(train_cfg)
 
@@ -106,7 +108,7 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/11_03_2021_18h37m16s/all_model_epoch_06")
+    model.load_weights("gs://ak-us-train/models/11_05_2021_18h16m04s/all_model_epoch_"+str(INIT_EPOCH))
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -116,7 +118,7 @@ val_ds = val_ds.shuffle(48)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1252*5
+count = 1252*INIT_EPOCH
 
 for i in range(len(callbacks)):
     try:
@@ -133,7 +135,7 @@ history = model.fit(
    	callbacks=callbacks,
 #     steps_per_epoch = 1251,
     validation_steps = 49,
-    initial_epoch=5
+    initial_epoch=INIT_EPOCH
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
