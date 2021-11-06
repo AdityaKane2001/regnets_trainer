@@ -69,7 +69,8 @@ val_prep_cfg = get_preprocessing_config(
 
 misc_dict = {
     "Rescaling": "1/255",
-    "Normalization": "None"
+    "Normalization": "None",
+    "mixup_alpha": 0.3
 }
 
 now = datetime.now()
@@ -96,7 +97,7 @@ logging.info(
 with strategy.scope():
     optim = get_optimizer(train_cfg)
 
-    model = tf.keras.applications.RegNetY002() #################################################change this!!
+    model = tf.keras.applications.RegNetX080() #################################################change this!!
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
             from_logits=True, label_smoothing=train_cfg.label_smoothing),
@@ -106,7 +107,7 @@ with strategy.scope():
             tf.keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
         ],
     )
-    model.load_weights("gs://ak-us-train/models/11_03_2021_18h37m16s/all_model_epoch_06")
+    model.load_weights("gs://ak-us-train/models/11_05_2021_05h48m59s/all_model_epoch_23")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -116,7 +117,7 @@ val_ds = val_ds.shuffle(48)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
-count = 1252*5
+count = 1252*23
 
 for i in range(len(callbacks)):
     try:
@@ -133,7 +134,7 @@ history = model.fit(
    	callbacks=callbacks,
 #     steps_per_epoch = 1251,
     validation_steps = 49,
-    initial_epoch=5
+    initial_epoch=23
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
