@@ -32,6 +32,7 @@ class PreprocessingConfig:
     num_classes: int
     color_jitter: bool
     mixup: bool
+    mixup_alpha: float
 
 
 @dataclass
@@ -107,6 +108,7 @@ def get_preprocessing_config(
     num_classes: int = 1000,
     color_jitter: bool = False,
     mixup: bool = True,
+    mixup_alpha: float = 0.2
 ):
 
     return PreprocessingConfig(
@@ -119,6 +121,7 @@ def get_preprocessing_config(
         num_classes=num_classes,
         color_jitter=color_jitter,
         mixup=mixup,
+        mixup_alpha=mixup_alpha,
     )
 
 

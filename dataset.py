@@ -1,3 +1,4 @@
+
 from typing import Union, Callable, Tuple, List, Type
 from datetime import datetime
 import math
@@ -31,10 +32,13 @@ class ImageNet:
         The strength parameter is set to 5, which controlsthe effect of augmentations.
     - Random rotate
     - Random crop and resize
+
     If `augment_fn` argument is not set to the string "default", it should be set to
     a callable object. That callable must take exactly two arguments: `image` and `target`
     and must return two values corresponding to the same.
+
     If `augment_fn` argument is 'val', then the images will be center cropped to 224x224.
+
     Args:
        cfg: regnety.config.config.PreprocessingConfig instance.
        no_aug: If True, overrides cfg and returns images as they are. Requires cfg object 
@@ -52,6 +56,7 @@ class ImageNet:
         self.num_classes = cfg.num_classes
         self.color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
+        self.mixup_alpha = cfg.mixup_alpha
         self.area_factor = 0.08
         self.no_aug = no_aug
         eigen_vals = tf.constant(
@@ -94,8 +99,10 @@ class ImageNet:
 
     def decode_example(self, example_: tf.Tensor) -> dict:
         """Decodes an example to its individual attributes.
+
         Args:
             example: A TFRecord dataset example.
+
         Returns:
             Dict containing attributes from a single example. Follows
             the same names as _TFRECS_FORMAT.
@@ -122,7 +129,9 @@ class ImageNet:
 
     def _read_tfrecs(self) -> Type[tf.data.Dataset]:
         """Function for reading and loading TFRecords into a tf.data.Dataset.
+
         Args: None.
+
         Returns:
             A tf.data.Dataset instance.
         """
@@ -143,9 +152,11 @@ class ImageNet:
         """
         Performs color jitter on the batch. It performs random brightness, hue, saturation,
         contrast and random left-right flip.
+
         Args:
             image: Batch of images to perform color jitter on.
             target: Target tensor.
+
         Returns:
             Augmented example with batch of images and targets with same dimensions.
         """
@@ -164,9 +175,11 @@ class ImageNet:
     def _inception_style_crop_batched(self, images, labels):
         """
         Applies inception style cropping
+
         Args:
             image: Batch of images to perform random rotation on.
             target: Target tensor.
+
         Returns:
             Augmented example with batch of images and targets with same dimensions.
         """
@@ -199,9 +212,11 @@ class ImageNet:
     def _pca_jitter(self, image, target):
         """
         Applies PCA jitter to images.
+
         Args:
             image: Batch of images to perform random rotation on.
             target: Target tensor.
+
         Returns:
             Augmented example with batch of images and targets with same dimensions.
         """
@@ -225,9 +240,11 @@ class ImageNet:
         """
         Returns randomly flipped batch of images. Only horizontal flip
         is available
+
         Args:
             image: Batch of images to perform random rotation on.
             target: Target tensor.
+
         Returns:
             Augmented example with batch of images and targets with same dimensions.
         """
@@ -238,9 +255,11 @@ class ImageNet:
     def random_rotate(self, image: tf.Tensor, target: tf.Tensor) -> tuple:
         """
         Returns randomly rotated batch of images.
+
         Args:
             image: Batch of images to perform random rotation on.
             target: Target tensor.
+
         Returns:
             Augmented example with batch of images and targets with same dimensions.
         """
@@ -252,9 +271,11 @@ class ImageNet:
     def random_crop(self, image: tf.Tensor, target: tf.Tensor) -> tuple:
         """ "
         Returns random crops of images.
+
         Args:
             image: Batch of images to perform random crop on.
             target: Target tensor.
+
         Returns:
             Augmented example with batch of images and targets with same dimensions.
         """
@@ -267,9 +288,11 @@ class ImageNet:
         """
         Resizes a batch of images to (self.resize_pre_crop, self.resize_pre_crop) and
         then takes central crop of (self.crop_size, self.crop_size)
+
         Args:
             image: Batch of images to perform center crop on.
             target: Target tensor.
+
         Returns:
             Center cropped example with batch of images and targets with same dimensions.
         """
@@ -319,20 +342,24 @@ class ImageNet:
     def _one_hot_encode_example(self, example: dict) -> tuple:
         """Takes an example having keys 'image' and 'label' and returns example
         with keys 'image' and 'target'. 'target' is one hot encoded.
+
         Args:
             example: an example dict having keys 'image' and 'label'.
+
         Returns:
             Tuple having structure (image_tensor, targets_tensor).
         """
         return (example["image"], tf.one_hot(example["label"], self.num_classes))
 
-    def _mixup(self, image, label, alpha=0.2) -> Tuple:
+    def _mixup(self, image, label) -> Tuple:
         """
         Function to apply mixup augmentation. To be applied after
         one hot encoding and before batching.
+
         Args:
             entry1: Entry from first dataset. Should be one hot encoded and batched.
             entry2: Entry from second dataset. Must be one hot encoded and batched.
+
         Returns:
             Tuple with same structure as the entries.
         """
@@ -343,7 +370,7 @@ class ImageNet:
         image1 = tf.cast(image1, tf.float32)
         image2 = tf.cast(image2, tf.float32)
 
-        alpha = [alpha]
+        alpha = [self.mixup_alpha]
         dist = tfd.Beta(alpha, alpha)
         l = dist.sample(1)[0][0]
 
@@ -363,12 +390,15 @@ class ImageNet:
             then generate random x and y values.
         3. Cache these x and y values if they are useful (BOTH MUST BE USEFUL)
         4. If cached values exist, return them, else return bad values (atleast one of x and y will contain -1).
+
         Run cases:
         1. Cached values can be filled multiple times. Any time, they will be useful. 
         2. If there were no (or partial) cached values after 10 iterations, we can safely apply validation crop
+
         Pros:
         1. The graph is constant, since we are not using break statement.
         2. From augmentation POV, the function remains constant.
+
         Cons:
         1. We run the function 10 times. However note that even if we encounter multiple valid values,
             all of them are valid. Thus this maintains corretness of the function. 
@@ -430,6 +460,8 @@ class ImageNet:
         1. Get random values from generate random dims function (see its docstring).
         2. If the values are good (both > -1) then do inception style cropping
         2. In all other cases do valiation cropping
+
+
         """
 
 
