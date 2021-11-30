@@ -57,7 +57,7 @@ class ImageNet:
         self.color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
         self.mixup_alpha = cfg.mixup_alpha
-        self.area_factor = 0.08
+        self.area_factor = cfg.area_factor
         self.no_aug = no_aug
         eigen_vals = tf.constant(
             [[0.2175, 0.0188, 0.0045],
@@ -328,7 +328,8 @@ class ImageNet:
         if x <= 0 or y <= 0:
             tf.print(x, y)
         img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
-
+        img = tf.cast(tf.math.round(tf.image.resize(
+                    img, (self.crop_size, self.crop_size))), tf.uint8)
 
         return {
             "image": tf.cast(img, tf.uint8),
@@ -565,7 +566,7 @@ class ImageNet:
 
         elif self.val_augment:
             ds = ds.map(self.validation_crop, num_parallel_calls=AUTO)
-            ds = ds.prefetch(AUTO)
+#             ds = ds.prefetch(AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)

@@ -26,6 +26,7 @@ class PreprocessingConfig:
     tfrecs_filepath: List[str]
     batch_size: int
     image_size: int
+    area_factor: float
     crop_size: int
     resize_pre_crop: int
     augment_fn: Union[str, Callable]
@@ -102,6 +103,7 @@ def get_preprocessing_config(
     tfrecs_filepath: List[str] = None,
     batch_size: int = 1024,
     image_size: int = 512,
+    area_factor: float = 0.08,
     crop_size: int = 224,
     resize_pre_crop: int = 320,
     augment_fn: Union[str, Callable] = "default",
@@ -115,6 +117,7 @@ def get_preprocessing_config(
         tfrecs_filepath=tfrecs_filepath,
         batch_size=batch_size,
         image_size=image_size,
+        area_factor=area_factor,
         crop_size=crop_size,
         resize_pre_crop=resize_pre_crop,
         augment_fn=augment_fn,
@@ -177,7 +180,13 @@ def get_optimizer(cfg):
         return tfa.optimizers.AdamW(
             weight_decay=cfg.weight_decay, learning_rate=cfg.base_lr
         )
-
+    
+    elif cfg.optimizer == "nadamw":
+        opt  = tfa.optimizers.extend_with_decoupled_weight_decay(tf.keras.optimizers.Nadam)
+        return opt(
+            weight_decay=cfg.weight_decay, learning_rate=cfg.base_lr
+        )
+    
     else:
         raise NotImplementedError(
             f"Optimizer choice not supported: {cfg.optimizer}")

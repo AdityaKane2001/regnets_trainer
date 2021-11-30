@@ -19,14 +19,15 @@ NORMALIZED = False
 
 log_location = "gs://ak-us-train"
 train_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://ak-imagenet-new-2/train/train_*.tfrecord")
+    "gs://ak-imagenet-new/train-2/train_*.tfrecord")
 val_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://ak-imagenet-new-2/valid/valid_*.tfrecord")
+    "gs://ak-imagenet-new/valid-2/valid_*.tfrecord")
 
 logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
                     datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO)
 
 cluster_resolver, strategy = connect_to_tpu()
+
 
 train_cfg = get_train_config(
     optimizer="adamw",
@@ -34,7 +35,7 @@ train_cfg = get_train_config(
     warmup_epochs=5,
     warmup_factor=0.1,
     total_epochs=100,
-    weight_decay=5e-5,
+    weight_decay=1e-5,
     momentum=0.9,
     label_smoothing=0.0,
     lr_schedule="half_cos",
@@ -47,19 +48,21 @@ train_prep_cfg = get_preprocessing_config(
     tfrecs_filepath=train_tfrecs_filepath,
     batch_size=1024,
     image_size=512,
+    area_factor=0.08,
     crop_size=224,
     resize_pre_crop=256,
     augment_fn="default",
     num_classes=1000,
     color_jitter=False,
-    mixup=False,
-    mixup_alpha=0.3
+    mixup=True,
+    mixup_alpha=0.2
 )
 
 val_prep_cfg = get_preprocessing_config(
     tfrecs_filepath=val_tfrecs_filepath,
     batch_size=1024,
     image_size=512,
+    area_factor=0.25,
     crop_size=224,
     resize_pre_crop=256,
     augment_fn="val",
@@ -72,7 +75,6 @@ val_prep_cfg = get_preprocessing_config(
 misc_dict = {
     "Rescaling": "1/255",
     "Normalization": "None",
-    "mixup_alpha": 0.3
 }
 
 now = datetime.now()
@@ -84,7 +86,7 @@ config_dict = get_config_dict(
 logging.info(config_dict)
 
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name="regnety002" + "_" + date_time, #################################################change this!!
+           job_type="train",  name="regnety008" + "_" + date_time, #################################################change this!!
 
            config=config_dict)
 # train_cfg = wandb.config.train_cfg
@@ -95,11 +97,13 @@ logging.info(
     f"Training on TFRecords: {train_prep_cfg.tfrecs_filepath[0]} to {train_prep_cfg.tfrecs_filepath[-1]}")
 logging.info(
     f"Validating on TFRecords: {val_prep_cfg.tfrecs_filepath[0]} to {val_prep_cfg.tfrecs_filepath[-1]}")
-INIT_EPOCH = 0
+
+INIT_EPOCH = 85
+
 with strategy.scope():
     optim = get_optimizer(train_cfg)
 
-    model = tf.keras.applications.RegNetX080() #################################################change this!!
+    model = tf.keras.applications.RegNetY008() #################################################change this!!
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
             from_logits=True, label_smoothing=train_cfg.label_smoothing),
@@ -110,13 +114,13 @@ with strategy.scope():
         ],
     )
     if INIT_EPOCH > 0:
-        model.load_weights("gs://ak-us-train/models/11_05_2021_05h48m59s/all_model_epoch_"+str(INIT_EPOCH))
+        model.load_weights("gs://ak-us-train/models/11_29_2021_02h21m20s/all_model_epoch_"+f"{INIT_EPOCH:02}")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
 # train_ds = train_ds.shuffle(300)
 val_ds = ImageNet(val_prep_cfg).make_dataset()
-val_ds = val_ds.shuffle(48)
+# val_ds = val_ds.shuffle(48)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
@@ -132,7 +136,7 @@ if INIT_EPOCH > 0:
 history = model.fit(
     train_ds,
    	epochs=train_cfg.total_epochs,
-    steps_per_epoch=1251,
+    steps_per_epoch=1252,
    	validation_data=val_ds,
 #     validation_steps=50,
    	callbacks=callbacks,
