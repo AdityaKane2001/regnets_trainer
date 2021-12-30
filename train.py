@@ -19,9 +19,9 @@ NORMALIZED = False
 
 log_location = "gs://ak-us-train"
 train_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://ak-imagenet-new-2/train/train_*.tfrecord")
+    "gs://ak-imagenet-new/train/train_*.tfrecord")
 val_tfrecs_filepath = tf.io.gfile.glob(
-    "gs://ak-imagenet-new-2/valid/valid_*.tfrecord")
+    "gs://ak-imagenet-new/valid/valid_*.tfrecord")
 
 logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
                     datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO)
@@ -52,8 +52,8 @@ train_prep_cfg = get_preprocessing_config(
     augment_fn="default",
     num_classes=1000,
     color_jitter=False,
-    mixup=False,
-    mixup_alpha=0.3
+    mixup=True,
+    mixup_alpha=0.4
 )
 
 val_prep_cfg = get_preprocessing_config(
@@ -95,7 +95,9 @@ logging.info(
     f"Training on TFRecords: {train_prep_cfg.tfrecs_filepath[0]} to {train_prep_cfg.tfrecs_filepath[-1]}")
 logging.info(
     f"Validating on TFRecords: {val_prep_cfg.tfrecs_filepath[0]} to {val_prep_cfg.tfrecs_filepath[-1]}")
-INIT_EPOCH = 55
+
+INIT_EPOCH = 89
+
 with strategy.scope():
     optim = get_optimizer(train_cfg)
 
@@ -110,13 +112,13 @@ with strategy.scope():
         ],
     )
     if INIT_EPOCH > 0:
-        model.load_weights("gs://ak-us-train/models/11_05_2021_17h52m07s/all_model_epoch_"+str(INIT_EPOCH))
+        model.load_weights("gs://ak-us-train/models/11_09_2021_11h00m35s/all_model_epoch_"+str(INIT_EPOCH))
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
 # train_ds = train_ds.shuffle(300)
 val_ds = ImageNet(val_prep_cfg).make_dataset()
-val_ds = val_ds.shuffle(48)
+# val_ds = val_ds.shuffle(48)
 
 
 callbacks = get_callbacks(train_cfg, date_time)
@@ -132,7 +134,7 @@ if INIT_EPOCH > 0:
 history = model.fit(
     train_ds,
    	epochs=train_cfg.total_epochs,
-    steps_per_epoch=1251,
+    steps_per_epoch=1252,
    	validation_data=val_ds,
 #     validation_steps=50,
    	callbacks=callbacks,

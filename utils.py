@@ -295,12 +295,9 @@ def get_config_dict(train_prep_cfg, val_prep_cfg, train_cfg, misc=None):
 
 def connect_to_tpu(tpu_address: str = None):
     if tpu_address is not None:
-        logging.info("Trying to connect to TPU...")
         cluster_resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
             tpu=tpu_address
         )
-        
-        logging.info("Cluster resolved")
         if tpu_address not in ("", "local"):
             tf.config.experimental_connect_to_cluster(cluster_resolver)
         tf.tpu.experimental.initialize_tpu_system(cluster_resolver)
@@ -310,12 +307,9 @@ def connect_to_tpu(tpu_address: str = None):
         return cluster_resolver, strategy
     else:
         try:
-            logging.info("Trying to connect to TPU...")
             cluster_resolver = (
                 tf.distribute.cluster_resolver.TPUClusterResolver.connect()
             )
-            logging.info("Cluster resolved")
-            logging.info("Initializing strategy")
             strategy = tf.distribute.TPUStrategy(cluster_resolver)
             logging.info(f"Running on TPU {cluster_resolver.master()}")
             logging.info(f"REPLICAS: {strategy.num_replicas_in_sync}")

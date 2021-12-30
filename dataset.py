@@ -140,6 +140,7 @@ class ImageNet:
         ds = files.interleave(
             tf.data.TFRecordDataset, num_parallel_calls=AUTO, deterministic=False
         )
+#         ds = tf.data.TFRecordDataset(self.tfrecs_filepath, num_parallel_reads=16)
 
         ds = ds.map(self.decode_example, num_parallel_calls=AUTO)
 
@@ -328,6 +329,8 @@ class ImageNet:
         if x <= 0 or y <= 0:
             tf.print(x, y)
         img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
+        img = tf.cast(tf.math.round(tf.image.resize(
+                    img, (self.crop_size, self.crop_size))), tf.uint8)
 
 
         return {
@@ -548,7 +551,7 @@ class ImageNet:
         if self.default_augment:
             ds = ds.map(self._inception_style_crop_single,
                         num_parallel_calls=AUTO)
-            ds = ds.prefetch(AUTO)
+#             ds = ds.prefetch(AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
 
@@ -565,7 +568,7 @@ class ImageNet:
 
         elif self.val_augment:
             ds = ds.map(self.validation_crop, num_parallel_calls=AUTO)
-            ds = ds.prefetch(AUTO)
+#             ds = ds.prefetch(AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)
