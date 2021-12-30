@@ -56,7 +56,8 @@ class ImageNet:
         self.num_classes = cfg.num_classes
         self.color_jitter = cfg.color_jitter
         self.mixup = cfg.mixup
-        self.area_factor = 0.25
+        self.mixup_alpha = cfg.mixup_alpha
+        self.area_factor = cfg.area_factor
         self.no_aug = no_aug
         eigen_vals = tf.constant(
             [[0.2175, 0.0188, 0.0045],
@@ -327,7 +328,8 @@ class ImageNet:
         if x <= 0 or y <= 0:
             tf.print(x, y)
         img = img[y: (y + self.crop_size), x: (x + self.crop_size), :]
-
+        img = tf.cast(tf.math.round(tf.image.resize(
+                    img, (self.crop_size, self.crop_size))), tf.uint8)
 
         return {
             "image": tf.cast(img, tf.uint8),
@@ -350,7 +352,7 @@ class ImageNet:
         """
         return (example["image"], tf.one_hot(example["label"], self.num_classes))
 
-    def _mixup(self, image, label, alpha=0.2) -> Tuple:
+    def _mixup(self, image, label) -> Tuple:
         """
         Function to apply mixup augmentation. To be applied after
         one hot encoding and before batching.
@@ -369,7 +371,7 @@ class ImageNet:
         image1 = tf.cast(image1, tf.float32)
         image2 = tf.cast(image2, tf.float32)
 
-        alpha = [alpha]
+        alpha = [self.mixup_alpha]
         dist = tfd.Beta(alpha, alpha)
         l = dist.sample(1)[0][0]
 
@@ -548,7 +550,9 @@ class ImageNet:
             ds = ds.map(self._inception_style_crop_single,
                         num_parallel_calls=AUTO)
             ds = ds.prefetch(AUTO)
+            
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
+#             ds = ds.map(lambda image, label: (tf.image.resize(image, (224,224)), label ), num_parallel_calls=AUTO )
             ds = ds.map(self.random_flip, num_parallel_calls=AUTO)
 
             if self.color_jitter:
@@ -564,7 +568,7 @@ class ImageNet:
 
         elif self.val_augment:
             ds = ds.map(self.validation_crop, num_parallel_calls=AUTO)
-            ds = ds.prefetch(AUTO)
+#             ds = ds.prefetch(AUTO)
             ds = ds.map(self._one_hot_encode_example, num_parallel_calls=AUTO)
             ds = ds.repeat()
             ds = ds.batch(self.batch_size, drop_remainder=False)

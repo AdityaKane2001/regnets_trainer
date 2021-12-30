@@ -26,12 +26,14 @@ class PreprocessingConfig:
     tfrecs_filepath: List[str]
     batch_size: int
     image_size: int
+    area_factor: float
     crop_size: int
     resize_pre_crop: int
     augment_fn: Union[str, Callable]
     num_classes: int
     color_jitter: bool
     mixup: bool
+    mixup_alpha: float
 
 
 @dataclass
@@ -101,24 +103,28 @@ def get_preprocessing_config(
     tfrecs_filepath: List[str] = None,
     batch_size: int = 1024,
     image_size: int = 512,
+    area_factor: float = 0.08,
     crop_size: int = 224,
     resize_pre_crop: int = 320,
     augment_fn: Union[str, Callable] = "default",
     num_classes: int = 1000,
     color_jitter: bool = False,
     mixup: bool = True,
+    mixup_alpha: float = 0.2
 ):
 
     return PreprocessingConfig(
         tfrecs_filepath=tfrecs_filepath,
         batch_size=batch_size,
         image_size=image_size,
+        area_factor=area_factor,
         crop_size=crop_size,
         resize_pre_crop=resize_pre_crop,
         augment_fn=augment_fn,
         num_classes=num_classes,
         color_jitter=color_jitter,
         mixup=mixup,
+        mixup_alpha=mixup_alpha,
     )
 
 
@@ -257,7 +263,7 @@ def get_callbacks(cfg, timestr):
         # best_model_checkpoint_callback,
         #         average_saving_callback,
         all_models_checkpoint_callback,
-        WandbCallback(save_model=False),
+        WandbCallback(),
     ]
 
 
