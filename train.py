@@ -48,7 +48,7 @@ train_prep_cfg = get_preprocessing_config(
     tfrecs_filepath=train_tfrecs_filepath,
     batch_size=1024,
     image_size=512,
-    area_factor=0.08,
+    area_factor=0.16,
     crop_size=224,
     resize_pre_crop=256,
     augment_fn="default",
@@ -86,7 +86,7 @@ config_dict = get_config_dict(
 logging.info(config_dict)
 
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name="regnety008" + "_" + date_time, #################################################change this!!
+           job_type="train",  name="regnety004" + "_" + date_time, #################################################change this!!
 
            config=config_dict)
 # train_cfg = wandb.config.train_cfg
@@ -98,12 +98,12 @@ logging.info(
 logging.info(
     f"Validating on TFRecords: {val_prep_cfg.tfrecs_filepath[0]} to {val_prep_cfg.tfrecs_filepath[-1]}")
 
-INIT_EPOCH = 85
+INIT_EPOCH = 80
 
 with strategy.scope():
     optim = get_optimizer(train_cfg)
 
-    model = tf.keras.applications.RegNetY008() #################################################change this!!
+    model = tf.keras.applications.RegNetY004() #################################################change this!!
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
             from_logits=True, label_smoothing=train_cfg.label_smoothing),
@@ -114,7 +114,7 @@ with strategy.scope():
         ],
     )
     if INIT_EPOCH > 0:
-        model.load_weights("gs://ak-us-train/models/11_29_2021_02h21m20s/all_model_epoch_"+f"{INIT_EPOCH:02}")
+        model.load_weights("gs://ak-us-train/models/12_09_2021_05h22m18s/all_model_epoch_"+f"{INIT_EPOCH:02}")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
@@ -125,7 +125,7 @@ val_ds = ImageNet(val_prep_cfg).make_dataset()
 
 callbacks = get_callbacks(train_cfg, date_time)
 if INIT_EPOCH > 0:
-    count = 1252*INIT_EPOCH
+    count = 1252*(INIT_EPOCH-3)
 
     for i in range(len(callbacks)):
         try:
@@ -142,7 +142,7 @@ history = model.fit(
    	callbacks=callbacks,
 #     steps_per_epoch = 1251,
     validation_steps = 49,
-    initial_epoch=INIT_EPOCH
+    initial_epoch=INIT_EPOCH-3
 )
 
 with tf.io.gfile.GFile(os.path.join(train_cfg.log_dir, "history_%s.json" % date_time), "a+") as f:
