@@ -6,7 +6,6 @@ import os
 import json
 import wandb
 import logging
-# Contrived example of generating a module named as a string
 
 from datetime import datetime
 from wandb.keras import WandbCallback
@@ -15,6 +14,63 @@ from utils import *
 from dacite import from_dict
 
 NORMALIZED = False
+
+# credits: https://github.com/sayakpaul/Sharpness-Aware-Minimization-TensorFlow
+class SAMModel(tf.keras.Model):
+    def __init__(self, resnet_model, rho=0.05):
+        """
+        p, q = 2 for optimal results as suggested in the paper
+        (Section 2)
+        """
+        super(SAMModel, self).__init__()
+        self.resnet_model = resnet_model
+        self.rho = rho
+
+    def train_step(self, data):
+        (images, labels) = data
+        e_ws = []
+        with tf.GradientTape() as tape:
+            predictions = self.resnet_model(images)
+            loss = self.compiled_loss(labels, predictions)
+        trainable_params = self.resnet_model.trainable_variables
+        gradients = tape.gradient(loss, trainable_params)
+        grad_norm = self._grad_norm(gradients)
+        scale = self.rho / (grad_norm + 1e-12)
+
+        for (grad, param) in zip(gradients, trainable_params):
+            e_w = grad * scale
+            param.assign_add(e_w)
+            e_ws.append(e_w)
+
+        with tf.GradientTape() as tape:
+            predictions = self.resnet_model(images)
+            loss = self.compiled_loss(labels, predictions)    
+        
+        sam_gradients = tape.gradient(loss, trainable_params)
+        for (param, e_w) in zip(trainable_params, e_ws):
+            param.assign_sub(e_w)
+        
+        self.optimizer.apply_gradients(
+            zip(sam_gradients, trainable_params))
+        
+        self.compiled_metrics.update_state(labels, predictions)
+        return {m.name: m.result() for m in self.metrics}
+
+    def test_step(self, data):
+        (images, labels) = data
+        predictions = self.resnet_model(images, training=False)
+        loss = self.compiled_loss(labels, predictions)
+        self.compiled_metrics.update_state(labels, predictions)
+        return {m.name: m.result() for m in self.metrics}
+
+    def _grad_norm(self, gradients):
+        norm = tf.norm(
+            tf.stack([
+                tf.norm(grad) for grad in gradients if grad is not None
+            ])
+        )
+        return norm
+
 
 
 log_location = "gs://ak-us-train"
@@ -27,8 +83,6 @@ logging.basicConfig(format="%(asctime)s %(levelname)s : %(message)s",
                     datefmt="%d-%b-%y %H:%M:%S", level=logging.INFO)
 
 cluster_resolver, strategy = connect_to_tpu()
-
-
 
 train_cfg = get_train_config(
     optimizer="adamw",
@@ -49,13 +103,13 @@ train_prep_cfg = get_preprocessing_config(
     tfrecs_filepath=train_tfrecs_filepath,
     batch_size=1024,
     image_size=512,
-    area_factor=0.16,
+    area_factor=0.08,
     crop_size=224,
     resize_pre_crop=256,
     augment_fn="default",
     num_classes=1000,
     color_jitter=False,
-    mixup=True,
+    mixup=False,
     mixup_alpha=0.2
 )
 
@@ -87,7 +141,7 @@ config_dict = get_config_dict(
 logging.info(config_dict)
 
 wandb.init(entity="compyle", project="keras-regnet-training",
-           job_type="train",  name="regnety008" + "_" + date_time, #################################################change this!!
+           job_type="train",  name="regnety002" + "_" + date_time, #################################################change this!!
 
            config=config_dict)
 # train_cfg = wandb.config.train_cfg
@@ -104,7 +158,8 @@ INIT_EPOCH = 0
 with strategy.scope():
     optim = get_optimizer(train_cfg)
 
-    model = tf.keras.applications.RegNetY008() #################################################change this!!
+    model = tf.keras.applications.RegNetY002() #################################################change this!!
+    model = SAMModel(model)
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(
             from_logits=True, label_smoothing=train_cfg.label_smoothing),
@@ -115,7 +170,7 @@ with strategy.scope():
         ],
     )
     if INIT_EPOCH > 0:
-        model.load_weights("gs://ak-us-train/models/11_24_2021_04h24m32s/all_model_epoch_"+f"{INIT_EPOCH:02}")
+        model.load_weights("gs://ak-us-train/models/11_11_2021_10h23m04s/all_model_epoch_"+f"{INIT_EPOCH:02}")
     logging.info("Model loaded")
 
 train_ds = ImageNet(train_prep_cfg).make_dataset()
