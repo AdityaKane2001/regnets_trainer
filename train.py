@@ -140,7 +140,6 @@ history = model.fit(
    	validation_data=val_ds,
 #     validation_steps=50,
    	callbacks=callbacks,
-#     steps_per_epoch = 1251,
     validation_steps = 49,
     initial_epoch=INIT_EPOCH-3
 )

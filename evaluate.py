@@ -126,8 +126,42 @@ with strategy.scope():
         print("Avg top5: ", avg_top5/10.)
 # train_ds = ImageNet(train_prep_cfg).make_dataset()
 
+
 # val_ds = val_ds.shuffle(49)
 
+metrics1 = model.evaluate(val_ds, verbose=1)
+# def check_same(labels_, predictions_):
+#     _correct = 0
+#     _total = 0
+#     predictions = tf.math.argmax(predictions_, axis=-1)
+#     labels = tf.math.argmax(labels_, axis=-1)
+#     for i in range(len(labels)):
+#         _total += 1
+#         if predictions[i] == labels[i]:
+#             _correct +=1
+#     return _correct, _total
+
+
+
+
+# correct = 0
+# total = 0
+# for num, batch in enumerate(val_ds):
+#     images, labels = batch
+#     predictions = model.predict(images)
+    
+#     print("Batch ",num)
+#     print("len labels",len(labels))
+#     print("len preds",len(predictions))
+#     results = tf.keras.metrics.categorical_accuracy(labels, predictions)
+#     correct_, total_ = check_same(labels, predictions)
+#     correct += correct_
+#     total += total_
+#     print("correct",correct)
+#     print("total",total)
+#     print("#" * 15)
+
+# print(correct / total)
 
 # callbacks = get_callbacks(train_cfg, date_time)
 # count = 1252*91

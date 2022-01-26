@@ -331,6 +331,7 @@ class ImageNet:
         img = tf.cast(tf.math.round(tf.image.resize(
                     img, (self.crop_size, self.crop_size))), tf.uint8)
 
+
         return {
             "image": tf.cast(img, tf.uint8),
             "height": self.crop_size,
